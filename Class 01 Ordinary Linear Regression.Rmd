@@ -1,0 +1,128 @@
+---
+title: "GLM I - Ordinary Linear Regression"
+subtitle: "August 27th, 2020"
+output:
+  ioslides_presentation:
+    incremental: true
+    widescreen: true
+    smaller: true
+    
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(fig.align = 'center')
+```
+
+## Setting the stage
+
+We will use the [`palmerpenguins`](https://allisonhorst.github.io/palmerpenguins/) dataset to demonstrate.
+
+```{r fig.align='center', message=FALSE, warning=FALSE, out.width="80%"}
+library(palmerpenguins)
+library(printr) # helps automatically print nice tables in presentation
+library(ggplot2)
+theme_set(theme_minimal()) # automatically set a simpler ggplot2 theme for all graphics
+knitr::include_graphics('resources/lter_penguins.png')
+```
+
+<font size = "3">
+artwork by @allison_horst
+</font>
+
+## Let's explore {.build}
+
+```{r, include = FALSE}
+# `include = FALSE` means that the code will run but 
+mod <- lm(flipper_length_mm ~ body_mass_g, data = penguins)
+intercept <- coef(mod)[1]
+slope <- coef(mod)[2]
+```
+
+```{r, echo = TRUE}
+summary(penguins)
+```
+
+## Define a relationship {.build}
+
+_Y = `body_mass_g`_
+
+_X = `flipper_length_mm`_
+
+$$
+\begin{aligned}
+Y &= f(X) \\
+Y &= \beta_0 + \beta_1X \\
+\end{aligned}
+$$
+$$
+\begin{aligned}
+\beta_0 &= 136, \beta_1 = .015 \\
+Y &= 136 + .015X
+\end{aligned}
+$$
+
+## Define a relationship {.build}
+
+```{r echo=TRUE, fig.height=4}
+sim_data <- data.frame(
+  body_mass_g = seq(from = 2700, to = 6300, length.out = 400)
+)
+sim_data$flipper_length_mm <- 136 + sim_data$body_mass_g * .015
+ggplot(sim_data, aes(x = body_mass_g, y = flipper_length_mm)) +
+  geom_line()
+```
+
+
+## Interpertation
+
+$$
+\begin{aligned}
+\beta_0 &= 136, \beta_1 = .015 \\
+Y &= 136 + .015X
+\end{aligned}
+$$
+
+- What does $\beta_0$ and $\beta_1$ represent?
+- What are we missing?
+
+<div class = "notes">
+A statistical relation, unlike a functional relation, is not a perfect one. In general, the observations for a statistical relation do not follow directly on-the curve of relationship.
+</div>
+
+## Overlay the actual data
+
+
+```{r}
+ggplot(sim_data, aes(x = body_mass_g, y = flipper_length_mm)) +
+  geom_line(aes(color = "fitted line")) +
+  geom_point(data = penguins,aes(color = "observed data")) +
+  scale_color_manual(values = c("observed data" =  "#9ebcda",
+                                "fitted line" = "black"), name = "")
+```
+
+## How do we model the data generating process?
+
+- How can we better mimic the data that we see?
+- We can add random noise
+- What kind of random noise can we add?
+
+## Random Variables
+
+
+
+```{r, echo = TRUE}
+sim_data$flipper_length_mm_w_noise <- 
+  sim_data$flipper_length_mm + rnorm(nrow(sim_data), mean = 0, sd = 6.9)
+```
+
+```{r}
+ggplot(sim_data, aes(x = body_mass_g, y = flipper_length_mm)) +
+  geom_line(aes(color = "fitted line")) +
+  geom_point(data = penguins,aes(color = "observed data"), alpha = 0.5) +
+  scale_color_manual(values = c("observed data" =  "#9ebcda",
+                                "fitted line" = "black"), name = "") +
+  geom_point(aes(y = flipper_length_mm_w_noise))
+```
+
+

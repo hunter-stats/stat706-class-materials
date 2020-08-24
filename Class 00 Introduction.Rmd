@@ -1,5 +1,5 @@
 ---
-title: "GLM I - Introduction and OLS"
+title: "GLM I - Introduction"
 subtitle: "August 27th, 2020"
 output:
   ioslides_presentation:
@@ -28,7 +28,10 @@ knitr::opts_chunk$set(echo = FALSE)
 
 - Please keep your camera on if you are able to/comfortable doing so
 - Please bear with me as I figure out how to best use blackboard etc. I may move platforms around at the beginning of the semester if I see something is lacking
+- Take notes! The slides are not exhaustive
 - Please speak up if you are having issues with any part of the course (material, homework, class times, discussion).
     - Utilize discussion boards or email/call me directly
 
+## Questions before we move on to an introduction to R
 
+- then let's look at: file `intro-to-R.R`
