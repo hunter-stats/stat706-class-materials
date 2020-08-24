@@ -1,0 +1,33 @@
+---
+title: "GLM I - Introduction and OLS"
+subtitle: "August 27th, 2020"
+output:
+  ioslides_presentation:
+    incremental: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+## Introduction
+
+- Welcome!
+- About me
+- [Review syllabus](https://bbhosted.cuny.edu/webapps/blackboard/content/listContentEditable.jsp?content_id=_47472169_1&course_id=_1900070_1&mode=reset)
+- [Course materials on Github](https://github.com/hunter-stats/stat706-class-materials)
+
+## Course Goals
+
+- Understand theory and math behind linear regression
+- Understand how simulation/data generating can help mimic the math
+- Expand the assumptions/equations behind linear regression to more general forms
+- Gain some hands on experience with statistical programming through R
+
+## Expectations
+
+- Please keep your camera on if you are able to/comfortable doing so
+- Please bear with me as I figure out how to best use blackboard etc. I may move platforms around at the beginning of the semester if I see something is lacking
+- Please speak up if you are having issues with any part of the course (material, homework, class times, discussion).
+    - Utilize discussion boards or email/call me directly
+
