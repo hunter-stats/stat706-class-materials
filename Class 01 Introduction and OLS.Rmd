@@ -31,3 +31,4 @@ knitr::opts_chunk$set(echo = FALSE)
 - Please speak up if you are having issues with any part of the course (material, homework, class times, discussion).
     - Utilize discussion boards or email/call me directly
 
+
