@@ -14,7 +14,9 @@ knitr::opts_chunk$set(echo = FALSE)
 knitr::opts_chunk$set(fig.align = 'center')
 ```
 
-## Setting the stage
+# Setting the stage
+
+## Dataset
 
 We will use the [`palmerpenguins`](https://allisonhorst.github.io/palmerpenguins/) dataset to demonstrate.
 
@@ -32,15 +34,17 @@ artwork by @allison_horst
 
 ## Let's explore {.build}
 
-```{r, include = FALSE}
-# `include = FALSE` means that the code will run but 
-mod <- lm(flipper_length_mm ~ body_mass_g, data = penguins)
-intercept <- coef(mod)[1]
-slope <- coef(mod)[2]
-```
 
 ```{r, echo = TRUE}
 summary(penguins)
+peng <- penguins[complete.cases(penguins), ]
+```
+
+```{r, include = FALSE}
+# `include = FALSE` means that the code will run but 
+mod <- lm(flipper_length_mm ~ body_mass_g, data = peng)
+intercept <- coef(mod)[1]
+slope <- coef(mod)[2]
 ```
 
 ## Define a relationship {.build}
@@ -57,29 +61,29 @@ Y &= \beta_0 + \beta_1X \\
 $$
 $$
 \begin{aligned}
-\beta_0 &= 136, \beta_1 = .015 \\
-Y &= 136 + .015X
+\beta_0 &= 137, \beta_1 = .015 \\
+Y &= 137 + .015X
 \end{aligned}
 $$
 
-## Define a relationship {.build}
+## Define a relationship - Plot {.build}
 
 ```{r echo=TRUE, fig.height=4}
 sim_data <- data.frame(
   body_mass_g = seq(from = 2700, to = 6300, length.out = 400)
 )
-sim_data$flipper_length_mm <- 136 + sim_data$body_mass_g * .015
+sim_data$flipper_length_mm <- 137 + sim_data$body_mass_g * .015
 ggplot(sim_data, aes(x = body_mass_g, y = flipper_length_mm)) +
   geom_line()
 ```
 
 
-## Interpertation
+## Interpertation {.build}
 
 $$
 \begin{aligned}
-\beta_0 &= 136, \beta_1 = .015 \\
-Y &= 136 + .015X
+\beta_0 &= 137, \beta_1 = .015 \\
+Y &= 137 + .015X
 \end{aligned}
 $$
 
@@ -90,13 +94,12 @@ $$
 A statistical relation, unlike a functional relation, is not a perfect one. In general, the observations for a statistical relation do not follow directly on-the curve of relationship.
 </div>
 
-## Overlay the actual data
-
+## Overlay the actual data {.build}
 
 ```{r}
 ggplot(sim_data, aes(x = body_mass_g, y = flipper_length_mm)) +
   geom_line(aes(color = "fitted line")) +
-  geom_point(data = penguins,aes(color = "observed data")) +
+  geom_point(data = peng, aes(color = "observed data")) +
   scale_color_manual(values = c("observed data" =  "#9ebcda",
                                 "fitted line" = "black"), name = "")
 ```
@@ -106,10 +109,28 @@ ggplot(sim_data, aes(x = body_mass_g, y = flipper_length_mm)) +
 - How can we better mimic the data that we see?
 - We can add random noise
 - What kind of random noise can we add?
+- What can we say about the random noise?
 
-## Random Variables
+
+## Random Variables - an aside{.build}
+
+```{r, echo=FALSE, out.width="90%"}
+par(mfrow=c(2,2))
+hist(rnorm(1000, mean = 0, sd = 1))
+hist(rt(1000, df = 10000))
+
+hist(runif(1000, min = -1, max = 1))
+hist(rpois(1000, lambda = 30) - 30)
+```
+
+## Random Variables | learn more
+
+```{r}
+?distribution
+```
 
 
+## Add in random noise
 
 ```{r, echo = TRUE}
 sim_data$flipper_length_mm_w_noise <- 
@@ -119,10 +140,145 @@ sim_data$flipper_length_mm_w_noise <-
 ```{r}
 ggplot(sim_data, aes(x = body_mass_g, y = flipper_length_mm)) +
   geom_line(aes(color = "fitted line")) +
-  geom_point(data = penguins,aes(color = "observed data"), alpha = 0.5) +
+  geom_point(data = peng, aes(color = "observed data"), alpha = 0.5) +
   scale_color_manual(values = c("observed data" =  "#9ebcda",
                                 "fitted line" = "black"), name = "") +
   geom_point(aes(y = flipper_length_mm_w_noise))
 ```
+
+## Formal Statement of Model {.build}
+
+$$
+Y_i = \beta_0 = \beta_1X_i + \epsilon_i
+$$
+
+- $Y_i$ is the value of the response variable in the $i$th observation
+- $\beta$s are the parameters
+- $X_i$ is a known constant
+- $\epsilon_i$ is a random error term with $E\{\epsilon_i\} = 0$, $Var\{\epsilon_i\} = \sigma^2$ and $\sigma\{\epsilon_i, \epsilon_j\} = 0$ for all $i, j; i \neq j$
+
+## Features of Model {.build}
+
+- Since $E\{\epsilon_i\} = 0$ we can show that  $E\{Y_i\} = \beta_0 + \beta_1X_i$
+- Similarly $\sigma^2\{Y_i\} = \sigma^2$
+- Because error terms are uncorrelated - Y's are uncorrelated
+
+## Interpertation and Alternative Form {.build}
+
+- Recall what $\beta_0$ generally represents in this example
+- We can rewrite so that:
+
+$$
+Y_i = \beta_0^* + \beta_1(X_i - \bar{X}) + \epsilon_i
+$$
+
+```{r, echo = TRUE}
+summary(peng$body_mass_g)
+```
+
+# Estimating the parameters
+
+## How do we know which line is better?
+
+```{r}
+ggplot(penguins, aes(x = body_mass_g, y = flipper_length_mm)) +
+  geom_point(aes(color = "observed data")) +
+  geom_abline(color = "#fb9a99", intercept = 137, slope = 0.015, show.legend = T) + 
+  geom_abline(intercept = 90, slope = 0.025, color = "#33a02c") + 
+  scale_color_manual(values = c("observed data" =  "#9ebcda")) +
+  labs(title = "Which line fits better?", color = "")
+```
+
+## Method of Least Squares {.build}
+
+- We want to minimize $Q$ where:
+
+$$
+Q = \sum^n_{i=1}{(Y_i - \beta_0 - \beta_1X_i)^2}
+$$
+our estimates for $\beta_0$ and $\beta_1$ will be $\hat\beta_0$ and $\hat\beta_1$, respectively.
+
+## Method of Least Squares: Visual {.build}
+
+```{r, include=FALSE}
+library(dplyr)
+```
+
+```{r}
+set.seed(202008)
+
+d_least_squares <- penguins %>% 
+  mutate(line1 = 137 + .015*body_mass_g,
+         line2 = 90 + .025*body_mass_g) %>% 
+  sample_n(4) %>% 
+  select(body_mass_g, flipper_length_mm, line1, line2)
+
+d_least_squares %>% 
+  ggplot(aes(x = body_mass_g)) +
+  geom_point(aes(y = flipper_length_mm, color = "observed data")) +
+  geom_line(aes(y = line1), color = "#fb9a99") + 
+  geom_linerange(aes(ymin = line1, ymax = flipper_length_mm), color = "#fb9a99", linetype = "longdash") + 
+  geom_line(aes(y = line2), color = "#33a02c") + 
+  geom_abline(intercept = 90, slope = 0.025, color = "#33a02c") + 
+  scale_color_manual(values = c("observed data" =  "#9ebcda")) +
+  labs(color = "")
+```
+
+## Calculate _Q_ | Definitions {.build}
+
+- Line1: $Y = 137 + .015X$
+- Line2: $Y = 90 + .025X$
+
+```{r}
+d_least_squares
+```
+
+```{r, echo = TRUE}
+with(d_least_squares, sum((line1 - flipper_length_mm)^2))
+with(d_least_squares, sum((line2 - flipper_length_mm)^2))
+```
+
+## How do you solve for best $\hat\beta_0$ and $\hat\beta_1$? | Numerical Search {.build}
+
+```{r}
+all_params <- expand.grid(
+  b0 = seq(-500, 500, length.out = 100),
+  b1 = seq(-.5, .5, length.out = 100)
+)
+
+calculate_q <- function(b0, b1){
+  raw_diff <- with(peng, flipper_length_mm - (b0 + b1*body_mass_g))
+  Q <- sum(raw_diff^2)
+  Q
+}
+
+all_params$Q <- purrr::pmap_dbl(all_params, calculate_q)
+
+ggplot(all_params, aes(x = b0, y = b1, fill = Q,color = NULL)) +
+  geom_tile() +
+  scale_fill_gradient(trans = "log", ) +
+  geom_point(aes(x = 137, y = .015), color = "grey80") +
+  labs(title = "Numerical Search for lowest Q")
+```
+
+## What are problems with this approach? {.build}
+
+- Too slow with lots of parameters (although there are plenty of fucntions that optimize everything).
+- There is a better way!
+
+
+## How do you solve for best $\hat\beta_0$ and $\hat\beta_1$? | Analytic Approach {.build}
+
+$$
+\hat\beta_1 = \frac{\sum{(X_i - \bar{X})(Y_i - \bar{Y})}}{\sum{(X_i - \bar{X})^2}}
+$$
+
+$$
+\hat\beta_0 = ???
+$$
+- $\hat\beta_0 = \bar{Y} - \hat\beta_1\bar{X}$
+- What happens to that equation when we center $X$?
+
+
 
 
