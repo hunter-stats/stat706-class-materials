@@ -278,7 +278,6 @@ $$
 $$
 - $\hat\beta_0 = \bar{Y} - \hat\beta_1\bar{X}$
 - What happens to that equation when we center $X$?
-
-
+- See this [link for a proof](https://are.berkeley.edu/courses/EEP118/current/derive_ols.pdf)
 
 
