@@ -1,0 +1,39 @@
+---
+title: "Intro to R"
+author: "Vitaly"
+date: "8/27/2020"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+# Introduction
+
+This is is just text. **TEXT**. 
+
+This section loads the data
+
+```{r}
+library(faraway)
+data("gavote")
+```
+
+# Quick Summary
+
+```{r}
+gavote$undercount <- (gavote$votes)/gavote$ballots
+summary(gavote)
+```
+
+
+# Best Plot Ever
+
+```{r}
+library(ggplot2)
+ggplot(gavote, aes(x = undercount)) +
+  geom_histogram()
+```
+
+
+
+

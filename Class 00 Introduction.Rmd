@@ -4,6 +4,7 @@ subtitle: "August 27th, 2020"
 output:
   ioslides_presentation:
     incremental: true
+    widescreen: true
 ---
 
 ```{r setup, include=FALSE}
