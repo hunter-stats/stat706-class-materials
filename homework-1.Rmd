@@ -1,0 +1,40 @@
+---
+title: "R for Data Science / 3.2.4"
+author: "Nickhil-Sethi"
+date: "8/31/2020"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+# R for Data Science, 3.2.4
+```{r}
+library(tidyverse)
+```
+
+## 1) Run `ggplot(data = mpg)`. What do you see?
+Running the above command, we actually see a blank screen:
+```{r}
+ggplot(data = mpg)
+```
+# How many rows are in `mpg`? How many columns?
+`mpg` has 234 rows and 11 columns, as can be seen from printing the truncated dataframe:
+```{r}
+mpg
+```
+
+
+# What does the `drv` variable describe? Read the help for `?mpg` to find out.
+
+`drv` is a categorical variable describing type of drive train. From the help page of the `mpg` data set, `the type of drive train, where f = front-wheel drive, r = rear wheel drive, 4 = 4wd`. 
+
+# Make a scatterplot
+```{r}
+ggplot(data = mpg) + geom_point(mapping = aes(x = cyl, y = hwy))
+```
+
+# Make a scatterplot of 
+It's hard to make sense of this plot because both `drv` and `class` are categorical variables. There is no order structure on either of the variables i.e. the way we embed them into the x and y axes is arbitrary. 
+```{r}
+ggplot(data = mpg) + geom_point(mapping = aes(x = drv, y = class))
+```
