@@ -233,6 +233,8 @@ d_least_squares %>%
 d_least_squares
 ```
 
+## Calculate _Q_ | Definitions {.build}
+
 ```{r, echo = TRUE}
 with(d_least_squares, sum((line1 - flipper_length_mm)^2))
 with(d_least_squares, sum((line2 - flipper_length_mm)^2))
@@ -278,7 +280,9 @@ $$
 $$
 - $\hat\beta_0 = \bar{Y} - \hat\beta_1\bar{X}$
 - What happens to that equation when we center $X$?
+
 - See this [link for a proof](https://are.berkeley.edu/courses/EEP118/current/derive_ols.pdf)
+
 - What happens if we get more data points?
 
 ## Solve for $\hat{\beta_1}$ and $\hat{\beta_0}$
@@ -316,10 +320,10 @@ hist(residuals)
 
 ## Properties {.build}
 
-- $\sum^{n}_{i = 1} {e_i} = $
+- $\sum^{n}_{i = 1} {e_i} =  ?$ 
     - $\sum^{n}_{i = 1} {e_i} = 0$
 
-- $\sum^{n}_{i = 1} {e_i^2} = $
+- $\sum^{n}_{i = 1} {e_i^2} = ?$ 
    - It's a minimum (it's the same as Q)
    
 - $\sum{Y_i} = \sum{\hat{Y}}$
@@ -334,9 +338,10 @@ hist(residuals)
 $$
 \hat{\sigma}^2 = \frac{\sum^n_{i=1}{(Y_i - \bar{Y})^2}}{n - 1}
 $$
+
 - Why $n-1$?
 
-## Estimation of $\sigma^2$ | An Aside
+## Estimation of $\sigma^2$ | An Aside (1)
 
 ```{r, echo = TRUE}
 calc_sds <- function(n, true_mean = 0, true_sd = 1){
@@ -352,6 +357,8 @@ calc_sds <- function(n, true_mean = 0, true_sd = 1){
   )  
 }
 ```
+
+## Estimation of $\sigma^2$ | An Aside (2)
 
 ```{r}
 set.seed(10)
@@ -388,7 +395,7 @@ $$
 
 ## Estimation of $\sigma^2$ {.build}
 
-```{r}
+```{r, echo = TRUE}
 sse <- sum(residuals^2)
 mse <- sse/(length(residuals)-2)
 mse
@@ -413,6 +420,8 @@ X <- c(250, 265, 259)
 ```
 
 - Is it more likely to come from `normal(230, 10)` or `normal(260, 5)`
+
+## Set Up | Visualization
 
 ```{r, echo = TRUE}
 op_1_sample <- rnorm(10000, 230, 10)
@@ -467,7 +476,7 @@ prod(lh$opt_2_l)
 
 - Multiplying ever smaller numbers becomes a problem for the computer so we often work with the logliklihood
 
-```{r}
+```{r, echo = TRUE}
 sum(log(lh$opt_1_l))
 sum(log(lh$opt_2_l))
 ```
@@ -491,12 +500,15 @@ expand.grid(mean = 210:300,
 
 ## Application to regression
 
+
 $$
+
 \begin{aligned}
 L(\mu, \sigma | x) & = \frac{1}{\sqrt{2\pi}\sigma}e^{-\frac{(x-\mu)^2}{2\sigma^2}} \\
-\mu & = \beta_ + \beta_1X_i, x = Y_i, \\
 
-L(\beta_0, \beta_1, \sigma | X, Y) & = \frac{1}{\sqrt{2\pi}\sigma}e^{-\frac{(Y_i - \beta_0 - \beta_1X_i)^2}{2\sigma^2}} \\
+\mu & = \beta_ + \beta_1X_i, x = Y_i \\
+
+L(\beta_0, \beta_1, \sigma | X, Y) & = \frac{1}{\sqrt{2\pi}\sigma}e^{-\frac{(Y_i - \beta_0 - \beta_1X_i)^2}{2\sigma^2}} 
 \end{aligned}
 $$
 
