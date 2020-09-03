@@ -125,7 +125,7 @@ hist(rpois(1000, lambda = 30) - 30)
 
 ## Random Variables | learn more
 
-```{r}
+```{r, echo = TRUE}
 ?distribution
 ```
 
@@ -134,7 +134,7 @@ hist(rpois(1000, lambda = 30) - 30)
 
 ```{r, echo = TRUE}
 sim_data$flipper_length_mm_w_noise <- 
-  sim_data$flipper_length_mm + rnorm(nrow(sim_data), mean = 0, sd = 6.9)
+  sim_data$flipper_length_mm + rnorm(nrow(sim_data), mean = 0, sd = 6.8)
 ```
 
 ```{r}
@@ -243,7 +243,7 @@ with(d_least_squares, sum((line2 - flipper_length_mm)^2))
 ```{r}
 all_params <- expand.grid(
   b0 = seq(-500, 500, length.out = 100),
-  b1 = seq(-.5, .5, length.out = 100)
+  b1 = seq(-.125, .125, length.out = 100)
 )
 
 calculate_q <- function(b0, b1){
@@ -257,14 +257,14 @@ all_params$Q <- purrr::pmap_dbl(all_params, calculate_q)
 ggplot(all_params, aes(x = b0, y = b1, fill = Q,color = NULL)) +
   geom_tile() +
   scale_fill_gradient(trans = "log", ) +
-  geom_point(aes(x = 137, y = .015), color = "grey80") +
+  geom_point(aes(x = 137, y = .015), color = "white", shape = 3) +
   labs(title = "Numerical Search for lowest Q")
 ```
 
 ## What are problems with this approach? {.build}
 
-- Too slow with lots of parameters (although there are plenty of fucntions that optimize everything).
-- There is a better way!
+- Too slow with lots of parameters (although there are plenty of functions that optimize more efficiently like `optim`).
+- If we are looking there is a better way
 
 
 ## How do you solve for best $\hat\beta_0$ and $\hat\beta_1$? | Analytic Approach {.build}
@@ -279,5 +279,239 @@ $$
 - $\hat\beta_0 = \bar{Y} - \hat\beta_1\bar{X}$
 - What happens to that equation when we center $X$?
 - See this [link for a proof](https://are.berkeley.edu/courses/EEP118/current/derive_ols.pdf)
+- What happens if we get more data points?
+
+## Solve for $\hat{\beta_1}$ and $\hat{\beta_0}$
+
+```{r, echo = TRUE}
+x_bar <- mean(peng$body_mass_g)
+y_bar <- mean(peng$flipper_length_mm)
+
+beta_1 <- sum((peng$body_mass_g - x_bar)*(peng$flipper_length_mm - y_bar))/sum((peng$body_mass_g - x_bar)^2)
+beta_0 <- y_bar - beta_1*x_bar
+
+beta_0
+beta_1
+```
+
+## Point Estimation {.build}
+
+- If I have a penguin that is 3K, how long do I expect that penguin's flipper to be?
+
+```{r}
+beta_0 + beta_1*3000
+```
 
 
+## Residuals {.build}
+
+- $e_i = Y_i - \hat{Y_i} = Y_i - (\hat\beta_0 + \hat\beta_1X_i)$
+- What is this related to?
+
+```{r}
+residuals <- peng$flipper_length_mm - (beta_0 + beta_1*peng$body_mass_g)
+hist(residuals)
+```
+
+
+## Properties {.build}
+
+- $\sum^{n}_{i = 1} {e_i} = $
+    - $\sum^{n}_{i = 1} {e_i} = 0$
+
+- $\sum^{n}_{i = 1} {e_i^2} = $
+   - It's a minimum (it's the same as Q)
+   
+- $\sum{Y_i} = \sum{\hat{Y}}$
+- $\sum{X_ie_i} = 0$
+- $\sum{\hat{Y_i}e_i} = 0$
+- The regression line will always go through $(\bar{X}, \bar{Y})$
+
+## Estimation of $\sigma^2$ | Sample Variance
+
+- The true variance is $\sigma^2$, estimate it with $\hat{\sigma}^2$
+
+$$
+\hat{\sigma}^2 = \frac{\sum^n_{i=1}{(Y_i - \bar{Y})^2}}{n - 1}
+$$
+- Why $n-1$?
+
+## Estimation of $\sigma^2$ | An Aside
+
+```{r, echo = TRUE}
+calc_sds <- function(n, true_mean = 0, true_sd = 1){
+  x <- rnorm(n, mean = true_mean, sd = true_sd)
+  x_bar <- mean(x)
+  
+  list(
+    true_mean = true_mean,
+    true_sd = true_sd,
+    s_wrong =  sum((x - x_bar)^2)/n,
+    s_cheat = sum((x - true_mean)^2)/n,
+    s_standard = sum((x - x_bar)^2)/(n - 1)
+  )  
+}
+```
+
+```{r}
+set.seed(10)
+res <- purrr::map_df(rep(3, 1000), calc_sds)
+res <- tidyr::pivot_longer(res, s_wrong:s_standard, names_to = "type", values_to = "sd_est") 
+res_summary <- res %>% group_by(type) %>% summarise(sd_est_mean = mean(sd_est), .groups = "drop")
+
+res %>% 
+  ggplot(aes(x = type, y = true_sd-sd_est)) +
+  geom_boxplot() +
+  coord_flip(ylim = c(-1,1)) +
+  geom_hline(yintercept = 0, linetype = "longdash") +
+  labs(title = "Various ways of estimating population variance",
+       caption = "1000 samples of 3 patients drawn from a normal(0,1) distribution\n Red dots show mean error") +
+  geom_point(aes(y = sd_est_mean -1 ), data = res_summary, color = "red")
+```
+
+## Estimation of $\sigma^2$ {.build}
+
+- Error sum of squares
+$$
+SSE = \sum^n_{i = 1}(Y_i - \hat{Y_i})^2 \\
+$$
+
+- Error mean square
+
+$$
+\hat{\sigma}^2  = MSE = \frac{SSE}{n-2}
+$$
+
+$$
+E\{MSE\} = \sigma^2
+$$
+
+## Estimation of $\sigma^2$ {.build}
+
+```{r}
+sse <- sum(residuals^2)
+mse <- sse/(length(residuals)-2)
+mse
+sqrt(mse)
+```
+
+- How can we lower the estimate? Why would we want to?
+
+# Maximum Liklihood Estimation
+
+## Motivation
+
+- No matter what may be the form of the distribution of the error terms the least squares method provides unbiased point estimators of $\beta_0$ and $\beta_1$, that have minimum variance among all unbiased linear estimators. To set up interval estimates and make tests, however, we need to make an assumption about the form of the distribution of
+the error terms.
+
+## Set Up
+
+- How to define the mean/standard deviation
+
+```{r, echo=TRUE}
+X <- c(250, 265, 259)
+```
+
+- Is it more likely to come from `normal(230, 10)` or `normal(260, 5)`
+
+```{r, echo = TRUE}
+op_1_sample <- rnorm(10000, 230, 10)
+op_2_sample <- rnorm(10000, 260, 5)
+```
+
+```{r}
+samp_df <- bind_rows(
+  data.frame(samp = op_1_sample,
+             dist = "normal(230, 10)"),
+   data.frame(samp = op_2_sample,
+             dist = "normal(260, 5)")
+) 
+
+samp_df %>% 
+  ggplot(aes(x = samp)) +
+  geom_density() +
+  facet_wrap(~dist) +
+  geom_point(data = data.frame(samp = X), y = 0, color = "red")
+```
+## Sampling vs Density Function
+
+$$
+L(\mu, \sigma | x) = \frac{1}{\sqrt{2\pi}\sigma}e^{-\frac{(x-\mu)^2}{2\sigma^2}}
+$$
+
+```{r, echo = TRUE}
+raw_norm_eq <- function(x, mu, sigma){
+  1/sqrt(2*pi*sigma^2) * exp(-((x-mu)^2/(2*sigma^2)))
+}
+
+all.equal(raw_norm_eq(210:260, mu = 230, sigma = 10),
+          dnorm(210:260, mean = 230, 10))
+```
+
+
+## Liklihood Calculation
+
+```{r, echo = TRUE}
+lh <- data.frame(X = X,
+           opt_1_l = dnorm(X, mean = 230, 10), 
+           opt_2_l = dnorm(X, mean = 260, sd = 5))
+```
+
+
+```{r, echo = TRUE}
+prod(lh$opt_1_l)
+prod(lh$opt_2_l)
+```
+
+## LogLiklihood Calculation
+
+- Multiplying ever smaller numbers becomes a problem for the computer so we often work with the logliklihood
+
+```{r}
+sum(log(lh$opt_1_l))
+sum(log(lh$opt_2_l))
+```
+
+## Finding Optimal Points {.build}
+
+- keep sigma constant at 10
+- vary the mean
+
+```{r}
+expand.grid(mean = 210:300, 
+            sd = 10) %>% 
+  mutate(LL = purrr::map2_dbl(mean, sd, ~sum(dnorm(X, .x, .y, log = T)))) %>% 
+  ggplot(aes(x = mean, y = LL)) +
+  geom_line()
+
+```
+
+- what can we see about the graph if it is 'pointier'?
+- How can we quantify pointiness?
+
+## Application to regression
+
+$$
+\begin{aligned}
+L(\mu, \sigma | x) & = \frac{1}{\sqrt{2\pi}\sigma}e^{-\frac{(x-\mu)^2}{2\sigma^2}} \\
+\mu & = \beta_ + \beta_1X_i, x = Y_i, \\
+
+L(\beta_0, \beta_1, \sigma | X, Y) & = \frac{1}{\sqrt{2\pi}\sigma}e^{-\frac{(Y_i - \beta_0 - \beta_1X_i)^2}{2\sigma^2}} \\
+\end{aligned}
+$$
+
+For _n_ points:
+
+$$
+\begin{aligned}
+L(\beta_0, \beta_1, \sigma) & = \prod^{n}_{i=1}\frac{1}{\sqrt{2\pi}\sigma}e^{-\frac{(Y_i - \beta_0 - \beta_1X_i)^2}{2\sigma^2}} \\
+\end{aligned}
+$$
+
+## Solving the parameters
+
+- $\beta_0$ and $\beta_1$ are estimated the same as with least squares
+
+$$
+\hat{\sigma}^2 = \frac{\sum{(Y_i - \hat{Y_i})^2}}{n}
+$$
