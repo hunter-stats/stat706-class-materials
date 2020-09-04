@@ -376,6 +376,26 @@ res %>%
   geom_point(aes(y = sd_est_mean -1 ), data = res_summary, color = "red")
 ```
 
+## Estimation of $\sigma^2$ | An Aside (3)
+
+```{r}
+set.seed(10)
+res <- purrr::map_df(rep(100, 1000), calc_sds)
+res <- tidyr::pivot_longer(res, s_wrong:s_standard, names_to = "type", values_to = "sd_est") 
+res_summary <- res %>% group_by(type) %>% summarise(sd_est_mean = mean(sd_est), .groups = "drop")
+
+res %>% 
+  ggplot(aes(x = type, y = true_sd-sd_est)) +
+  geom_boxplot() +
+  coord_flip(ylim = c(-1,1)) +
+  geom_hline(yintercept = 0, linetype = "longdash") +
+  labs(title = "Various ways of estimating population variance",
+       subtitle = "100 patients per sample",
+       caption = "1000 samples of 100 patients drawn from a normal(0,1) distribution\n Red dots show mean error") +
+  geom_point(aes(y = sd_est_mean -1 ), data = res_summary, color = "red")
+```
+
+
 ## Estimation of $\sigma^2$ {.build}
 
 - Error sum of squares
@@ -402,7 +422,6 @@ mse
 sqrt(mse)
 ```
 
-- How can we lower the estimate? Why would we want to?
 
 # Maximum Liklihood Estimation
 
@@ -442,6 +461,7 @@ samp_df %>%
   facet_wrap(~dist) +
   geom_point(data = data.frame(samp = X), y = 0, color = "red")
 ```
+
 ## Sampling vs Density Function
 
 $$
@@ -502,12 +522,9 @@ expand.grid(mean = 210:300,
 
 
 $$
-
 \begin{aligned}
 L(\mu, \sigma | x) & = \frac{1}{\sqrt{2\pi}\sigma}e^{-\frac{(x-\mu)^2}{2\sigma^2}} \\
-
-\mu & = \beta_ + \beta_1X_i, x = Y_i \\
-
+\mu & = \beta_0 + \beta_1X_i, x = Y_i \\
 L(\beta_0, \beta_1, \sigma | X, Y) & = \frac{1}{\sqrt{2\pi}\sigma}e^{-\frac{(Y_i - \beta_0 - \beta_1X_i)^2}{2\sigma^2}} 
 \end{aligned}
 $$
@@ -527,3 +544,13 @@ $$
 $$
 \hat{\sigma}^2 = \frac{\sum{(Y_i - \hat{Y_i})^2}}{n}
 $$
+```{r}
+peng$body_mass_g_cent <- peng$body_mass_g - mean(peng$body_mass_g)
+
+summary(peng$body_mass_g_cent)
+
+lm(flipper_length_mm ~ body_mass_g_cent + 1, data = peng)
+
+lm(flipper_length_mm ~ body_mass_g + 1, data = peng)
+```
+
