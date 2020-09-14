@@ -1,0 +1,56 @@
+---
+title: "Homework 2 - Question 2"
+author: "Vitaly Druker"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Set Up
+
+Use the swiss data with Fertility as the response:
+
+```{r}
+data("swiss")
+?swiss
+```
+
+## Directed Analysis
+
+Use Agriculture as the only predictor
+
+```{r}
+lmod <- lm(swiss$Fertility ~ swiss$Agriculture)
+```
+
+1. What are the estimates for $beta_0$ and $beta_1$? Show that the `lm` function gives the same output as a calculation by hand.
+```{r}
+# print the coefficients from earlier
+coef(lmod)
+```
+Now we run a manual estimate and notice that it gives us nearly the exact same coefficients:
+```{r}
+# now the manual estimates
+manual_estimate_beta_1 <- cov(swiss$Fertility, swiss$Agriculture) / var(swiss$Agriculture)
+manual_estimate_beta_0 <- mean(swiss$Fertility) - manual_estimate_beta_1 * mean(swiss$Agriculture)
+
+# notice they're the same as above
+manual_estimate_beta_1
+manual_estimate_beta_0
+```
+2. Interpret the results - what do each of the coefficients represent? Are there any considerations about the range of values that the model is applicable for?
+TODO(nickhil) : run confidence interval plot
+
+3. Create a few residual plots of your choice and comment on your findings
+```{r}
+fertility_residuals <- residuals(lmod)
+plot(swiss$Agriculture, fertility_residuals, ylab="Residual", xlab="% males in agriculture profession", main="Residual plot")
+```
+4. Let's say a French-speaking province was previously left out (at random) that has an 70% of males involved in agriculture as an occupation. What do you exepect the fertility measure to be? Create an 89% interval. Should a confidence or prediction interval be used?
+
+
+## Analyses of your choice
+
+Pick 2 other models (with different variables included) and compare them to the previous analysis. Which fits the data better? Convince me that you have picked the best model using some of the tools we learned about in class and that are covered in the Introduction chapter.
