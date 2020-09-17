@@ -1,5 +1,5 @@
 ---
-title: "GLM I - Binomial Data"
+title: "GLM I - Binary Response"
 subtitle: "September 10th, 2020 "
 output:
   ioslides_presentation:
@@ -22,47 +22,53 @@ theme_set(theme_minimal()) # automatically set a simpler ggplot2 theme for all g
 ```
 
 
-# Binomial Data
+# Binary Data
 
 ## The example data
 
-- Challenger Shuttle  Example
+- Heart Disease Example
 
 ```{r, echo = TRUE}
-summary(orings)
+summary(wcgs[, c("chd", "height", "cigs")])
 ```
-
-- damage: how many of 6 were damaged
 
 ## Example Data | Plot
 
 ```{r}
-ggplot(orings, aes(x = temp, y = damage/6)) +
-  geom_point() +
-  labs(x = "Temperature", y = "Prob of Damage")
+p1 <- ggplot(wcgs, aes(fill = chd, x = height)) +
+  geom_density(alpha = .3, color = NA)
+
+p2 <- ggplot(wcgs, aes(fill = chd, x = cigs)) + 
+  geom_density(alpha = .3, color = NA)
+
+grid.arrange(p1, p2, ncol = 2)
 ```
 
 ## Let's create a linear model
 
 ```{r, echo = TRUE}
-lm(damage/6 ~ temp, data = orings)
+wcgs2 <- wcgs %>% 
+  mutate(chd = as.numeric(chd =='yes'))
+
+
+lm(chd ~ height, data = wcgs2)
 ```
 ## Let's create a linear model
 
 ```{r}
-ggplot(orings, aes(x = temp, y = damage/6)) +
-  geom_point() +
-  labs(x = "Temperature", y = "Prob of Damage") +
+ggplot(wcgs2, aes(x = height, y = chd)) +
+  geom_jitter(height = 0, alpha = 0.1) +
+  labs(x = "Height", y = "CHD") +
   geom_smooth(method = "lm")
 ```
 - What's the issue with this model?
 
-## Binomial Regression:
+## Binary Regression:
 
-- Assume response is distributed binomially $B(n_i, p_i)$ for each $i$ observation
+- Assume response is distributed bernoulli $B(p_i)$ for each $i$ observation
 
 $$
-P(Y_i = y_i) = {n_i\choose y_i}p_i^{y_i}(1-p_i)^{n_i-y_i}
+P(Y_i = y_i) = p_i^{y_i}(1-p_i)^{1-y_i}
 $$
 - Let's construct a linear predictor with $q$ terms
 
@@ -99,8 +105,11 @@ $$
 p =\frac{e^{\eta}}{e^{\eta} + 1}
 $$
 
+
+
 $$
-l(\beta) = \sum^n_{i = 1}\left[y_i\eta_i- n_ilog(1 + e^\eta_i) + log{n_i\choose y_i} \right]
+l(\beta) = \sum^n_{i = 1}\left[y_i\eta_i - log(1 + e^\eta_i) \right] \\
+\eta = log(p/(1-p))
 $$
 - see Appendix A for a bit more details
 
@@ -108,67 +117,49 @@ $$
 ## Run it in R
 
 ```{r, echo = TRUE}
-logitmod <- glm(cbind(damage, 6 - damage) ~ temp, family = binomial(link = "logit"), data = orings)
+logitmod <- glm(chd ~ height, family = binomial(link = "logit"), data = wcgs)
 summary(logitmod)
 ```
 
 ## Compare links
 
 ```{r}
-probitfit <- glm(cbind(damage, 6 - damage) ~ temp, family = binomial(link = "probit"), data = orings)
+probitfit <- glm(chd ~ height, family = binomial(link = "logit"), data = wcgs)
 
-fake_data <- data.frame(temp = seq(30, 80, length.out = 100))
-ggplot(orings, aes(x = temp, y = damage/6)) +
-  geom_point() +
-  labs(x = "Temperature", y = "Prob of Damage") +
+fake_data <- data.frame(height = seq(10, 100, length.out = 100))
+ggplot(wcgs, aes(x = height, y = as.numeric(chd == 'yes'))) +
+  # geom_point() +
+  labs(x = "Height", y = "Prob of CHD") +
   geom_line(data = fake_data, aes(y = predict(logitmod, fake_data, type = "response"), linetype = "logit")) + 
 geom_line(data = fake_data, aes(y = predict(probitfit, fake_data, type = "response"), linetype = "probit")) +
-  geom_smooth(method = 'lm') +
-  coord_cartesian(ylim = c(0,1))
+  geom_smooth(method = 'lm') 
+  # coord_cartesian(ylim = c(0,1))
 ```
+
+## Fit the full model
+
+```{r}
+lmod <- glm(chd ~ height + cigs, family = binomial, wcgs)
+summary(lmod)
+```
+
+
 
 ## How do we create predictions?
 
 ```{r, echo = TRUE}
-eta <- 11.66 + 31*-.216
-exp(eta)/(exp(eta) + 1)
+coef(lmod)
+ilogit <- function(odds){
+  exp(odds)/(exp(odds) + 1)
+}
 
-predict(logitmod, data.frame(temp = 31), type = "response")
+eta <- -4.50161397  + .02520779 * 50 + 10 * 0.02312740 
+
+ilogit(eta)
+
+predict(lmod, data.frame(height = 50, cigs = 10), type = "response")
 ```
 
-
-## Likelihood Ratio (Deviance)
-
-$$
-2log(\frac{L_L}{L_S})
-$$
-
-- $L_L$ has perfect fit to the data (e.g. $\hat{p_i} = y_i/n_i$) and is _constant_ for a given data set
-
-$$
-D = 2\sum^n_{i = 1}\left\{ y_ilog(\frac{y_i}{\hat{y_i}}) +(n_i - y_i)log\frac{n_i - y_i}{n_i - \hat y_i}  \right\}
-$$
-where $\hat y$ are the fitted models from the smaller model
-- This value is approximately $\chi^2$ distributed
-
-```{r}
-df.residual(logitmod)
-nrow(orings)
-pchisq(deviance(logitmod), df.residual(logitmod), lower = FALSE)
-```
-
- - if p value is not significant than the model is not different than 'perfect fit'
-
-## Confidence Intervals
-
-$$
-\hat{\beta} \pm z^{(a/2)}se(\hat\beta_i)
-$$
-```{r}
-coef(logitmod)
-confint(logitmod)
-summary(logitmod)$coefficients
-```
 
 ## Interperting Odds
 
@@ -191,6 +182,11 @@ $$
 
 - this only applies to logit, hard to explain with probit, cloglog
 
+```{r, echo = TRUE}
+exp(coef(lmod))
+```
+- We can say that the odds of heart disease increase by 2.6\% with each additional
+inch in height and by 2.3\% with each additional cigarette smoked per day
 
 ## Odds
 
@@ -207,66 +203,353 @@ $$
 \frac{odds_1}{odds_0} = e^{\beta_1}
 $$
 
+## Relative Risk
 
-## Prospective and Retrospective Sampling
+- relative risk is another measure that can be easier to
 
-- prospective sampling, predictors are fixed and the outcome is observed (cohort study)
-- retrospective sampling, outcome is fixed and the predictors are observed (case control study)
-    - probability of inclusion is independent of the predictor values
-
-## Choice of link function
-
-- I would use a sensitivity analysis but there aren't a lot of differences
-- Practically, logit is used almost every single time
-
-## Pearson Residuals
-
-- Pearson Residual
-
-$$
-r_i^P = (y_i - n_i\hat p)\sqrt{var(\hat y_i)}
-$$
-
-- this can be used in addition to deviance and is generally very close
-
-```{r}
-orings$res <- residuals(logitmod, type = "pearson")
-sum(orings$res^2)
-deviance(logitmod)
-```
-
-## Prediction of Effective Doses (bliss data)
-
-```{r}
-?bliss
-```
-
-
-## Prediction of Effective Doses (bliss data)
-
-
-```{r}
-data(bliss)
-
-ggplot(bliss, aes(x = conc, y = dead/(dead + alive))) +
-  geom_point()
-```
-
-## Fit a model to the data
 
 ```{r, echo = TRUE}
-modl <- glm(cbind(dead, alive) ~ conc, family = binomial, data = bliss)
-lmodsum <- summary(modl)
+# 20 cigs, 68"
+ilogit(sum(coef(lmod) * c(1,68, 20)))
 
-predict(modl, data.frame(conc = 2.5), se = TRUE)
-
-ilogit(
-  c(.58  + c(-1, 1)*1.96 *.2263)
-)
+# 20 cigs, 68"
+ilogit(sum(coef(lmod) * c(1,68, 0)))
 
 ```
 
-- there is no extra variance in predicting a single observation vs a mean (variance is built into prediction)
+- relative risk
+
+```{r, echo = TRUE}
+.089/.058
+```
+
+# Inference
+
+## Likelihood Ratio
+
+- $L_L$ is a larger model, $L_S$ is a smaller model
+
+$$
+2log\frac{L_L}{L_S}
+$$
+- use saturated model where L_L fits the data perfectly so $L_L$ = 0.
+
+
+$$
+\begin{align}
+D &= -2 \sum_{i=1}^n\hat p_i logit(\hat p_i) + log(1 - \hat p_i) \\ 
+& = -2\sum_{i=1}^n{y_i log(\hat p_i) + (1 - y_i) log(1 - \hat p_i)}
+\end{align}
+$$
+
+## Deviance
+
+```{r}
+summary(lmod)
+```
+
+## Deviance
+
+```{r, echo = TRUE}
+p_hat <- fitted.values(lmod)
+
+dev_res <- -2*sum(p_hat*logit(p_hat) + log(1-p_hat))
+
+null_mod <- update(lmod, formula. = . ~ 1)
+p_hat_null <- fitted.values(null_mod)
+dev_null <- -2*sum(p_hat_null*logit(p_hat_null) + log(1-p_hat_null))
+
+dev_res
+dev_null
+```
+
+## Compare two models
+
+- degrees of freedom is the difference in df between the two models
+
+```{r}
+1 - pchisq(dev_null - dev_res, 2)
+```
+
+- this suggests that the 2 variables we included are 'useful'
+
+
+## Look at a single variable
+
+```{r, echo = TRUE}
+lmodc <- glm(chd ~ cigs, family = binomial, wcgs)
+anova(lmodc,lmod, test="Chi")
+```
+
+## Confidence Interval
+
+$$
+\hat \beta_i \pm z^{\alpha/2}se(\hat \beta_i)
+$$
+For $\beta_1$ (height)
+
+```{r, echo = TRUE}
+exp(0.02521 + c(-1,1) * 1.96 * 0.02633)
+
+confint(lmod)
+```
+
+- liklihood is better
+
+
+## Residuals
+
+```{r, echo = TRUE}
+pred_prob <- predict(lmod, type="response")
+raw_res <- as.numeric((wcgs$chd ==  "yes")) - pred_prob
+raw_res <- residuals(lmod, type = "response")
+```
+
+
+## Residuals' Variance
+
+- Variance is not constant (binary variance = p(1-p))
+- use deviance residual instead
+
+$$
+r_i = sign(y_i - \hat p_i)\sqrt{r_i^2}
+$$
+
+- The deviance residuals are not constrained to have mean zero so the mean level in
+the plot is not of interest.
+
+```{r, echo = TRUE}
+wcgs2 <- wcgs2 %>% 
+  mutate(residuals=residuals(lmod), linpred=predict(lmod))
+```
+
+## Plots of residuals 
+
+- Use smoothing instead of binning that's in the book
+
+```{r}
+wcgs2 %>% 
+  ggplot(aes(x = linpred, y = residuals)) +
+  geom_point() + 
+  geom_smooth(method = 'loess')
+```
+## Plots of residuals 
+
+```{r}
+p1 <- wcgs2 %>% 
+  ggplot(aes(x = cigs, y = residuals)) +
+  # geom_point() + 
+  geom_smooth(method = 'loess') +
+  geom_rug(sides = "b", alpha = .3)
+
+p2 <- wcgs2 %>% 
+  ggplot(aes(x = height, y = residuals)) +
+  # geom_point() + 
+  geom_smooth(method = 'loess') +
+  geom_rug(sides = "b", alpha = .3)
+
+grid.arrange(p1, p2, ncol = 2)
+```
+## Leverage
+
+```{r, echo = TRUE}
+wcgs2 %>%
+  mutate(lev = hatvalues(lmod)) %>% 
+  arrange(-lev) %>% 
+  dplyr::select(height, cigs, lev) 
+```
+# Model Selection
+
+$$
+AIC = -2log \space L + 2q
+$$
+```{r}
+wcgs2$bmi <- with(wcgs2, 703*weight/(height^2))
+lmod <- glm(chd ~ age + height + weight +bmi + sdp + dbp + chol + dibep + cigs +arcus, family=binomial, wcgs2)
+lmodr <- step(lmod, trace=1)
+```
+
+## Resulting Model
+
+- This is ok if your goal is _prediction_
+```{r}
+summary(lmodr)
+```
+
+## But what if you want inference?
+
+- just cause a factor is dropped from the model doesn't mean it may not influence outcome
+
+- dbp was dropped from the model but that doesn't mean it doesn't influence the outcome
+
+```{r}
+summary(update(lmod, . ~ dbp))
+```
+
+
+# Goodness of Fit
+
+
+## Does a model fit?
+
+- I don't think this is a particularily useful question
+- I've never come across a problem where a model doesn't fit at all
+
+## Calibration Curve
+
+- the book shows a binned version (figure 2.9)
+
+
+```{r}
+wcgs2 %>% 
+  ggplot(aes(x = pred_prob, y = chd)) +
+  geom_point(alpha = .2) +
+  geom_smooth(method = "loess") +
+  geom_abline(slope = 1, intercept = 0, linetype = "longdash") +
+  coord_cartesian(ylim = c(0,1))
+```
+## Scoring
+
+- Brier Score
+
+$$
+\frac{1}{n}\sum_{i=1}^n(\hat p_i - y_i)^2
+$$
+- logarithmic scoring
+
+$$
+\sum y log(\hat p) + (1-y) log(1 - \hat p)
+$$
+## Confusion Matrix
+
+```{r, echo = TRUE}
+tabl <- wcgs %>% 
+  filter(complete.cases(.)) %>% 
+  mutate(predout = ifelse(fitted.values(lmodr) > .5, "yes", "no")) %>% 
+  xtabs(~chd + predout, .)
+
+tabl
+```
+
+- Accuracy = 
+
+```{r}
+(2882+2)/(2882+3+253+2)
+```
+
+## Specificity and Sensitivity
+
+Specificity (for those the don't have the diease how many were predicted to not have it) (chd = no group)
+
+```{r}
+tabl
+```
+
+```{r, echo = TRUE}
+2882/(2882 + 3)
+```
+
+Specificity (for those that have disease how many were correctly identified?) (chd  = yes)
+
+```{r}
+2/(253 + 2)
+```
+
+## PPV and NPV
+
+```{r}
+tabl
+```
+
+- It may be more reasonable to ask: What's the probability that I have the disease if I test positive?
+
+PPV 
+
+```{r}
+2/(3 + 2)
+```
+
+NPV
+
+```{r}
+2882/(253 + 2882)
+```
+
+## Vary the cutoff
+
+```{r, echo = TRUE}
+wcgsm <- wcgs2 %>% 
+  filter(complete.cases(.)) %>% 
+  mutate(predprob = predict(lmodr, .,type = "response"))
+  
+
+thresh <- seq(0.01,0.5,0.01)
+Sensitivity <- numeric(length(thresh))
+Specificity <- numeric(length(thresh))
+PPV <- numeric(length(thresh))
+NPV <- numeric(length(thresh))
+F1 <- numeric(length(thresh))
+for(j in seq(along=thresh)){
+  pp <- ifelse(wcgsm$predprob < thresh[j],"no","yes")
+  xx <- xtabs( ~ chd + pp, wcgsm)
+  Specificity[j] <- xx[1,1]/(xx[1,1]+xx[1,2])
+  Sensitivity[j] <- xx[2,2]/(xx[2,1]+xx[2,2])
+  PPV[j] <- xx[2,2]/(xx[1,2] + xx[2,2])
+  NPV[j] <- xx[1,1]/(xx[2,1] + xx[1, 1])
+  F1[j] <-  xx[2,2]/(xx[2,2] + 1/2*(xx[2,1] + xx[1,2]))
+}
+full_df <- data.frame(
+  thresh = thresh,
+  sens = Sensitivity,
+  spec = Specificity,
+  PPV = PPV,
+  NPV = NPV, 
+  F1 = F1
+)
+full_df$best <- NA
+full_df$best[which.max(F1)] <- "Best"
+best_thresh <- thresh[which.max(F1)]
+```
+
+## Sensitivity vs Specificity
+
+```{r}
+p1 <- ggplot(full_df, aes(x = thresh)) +
+  geom_line(aes(y = sens, linetype = "Sensitivity")) +
+    geom_line(aes(y = spec, linetype = "Specificity")) +
+  theme(legend.position = 'bottom') +
+  geom_vline(xintercept = best_thresh, linetype = "longdash")
+  
+
+
+p2 <- ggplot(full_df, aes(x = 1-spec, y = sens)) +
+  geom_line() +
+  geom_point(aes(color = best)) + 
+  geom_abline(slope = 1, intercept = 0, linetype = "longdash")
+
+grid.arrange(p1, p2, ncol = 2)
+```
+
+## NPV and PPV
+
+```{r}
+p1 <- ggplot(full_df, aes(x = thresh)) +
+  geom_line(aes(y = PPV, linetype = "PPV")) +
+    geom_line(aes(y = NPV, linetype = "NPV")) +
+  theme(legend.position = 'bottom')+
+  geom_vline(xintercept = best_thresh, linetype = "longdash")
+
+
+p2 <- ggplot(full_df, aes(x = 1- NPV, y = PPV)) +
+  geom_point(aes(color = best)) + 
+  geom_line() 
+
+grid.arrange(p1, p2, ncol = 2)
+```
+## Not covered
+
+- $R^2$
+- Estimation issues
 
 
 ## Lab with `pima` dataset (question 3 of excercise)
@@ -279,10 +562,3 @@ pchisq(723.45, 759, lower = FALSE)
 pima %>% filter(glucose == 99, pregnant ==1 )
 ```
 
-## Left out of lecture
-
- - Tolerance Distribution
- - Estimation Problems
- - More details of Goodness of Fit
- - Matched Case Control
- - Over Dispersion
