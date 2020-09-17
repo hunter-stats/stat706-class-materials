@@ -1,0 +1,288 @@
+---
+title: "GLM I - Binomial Data"
+subtitle: "September 10th, 2020 "
+output:
+  ioslides_presentation:
+    widescreen: true
+    smaller: true
+    
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(fig.align = 'center')
+library(faraway)
+library(dplyr)
+library(ggplot2)
+library(gridExtra)
+library(printr)
+
+theme_set(theme_minimal()) # automatically set a simpler ggplot2 theme for all graphics
+
+```
+
+
+# Binomial Data
+
+## The example data
+
+- Challenger Shuttle  Example
+
+```{r, echo = TRUE}
+summary(orings)
+```
+
+- damage: how many of 6 were damaged
+
+## Example Data | Plot
+
+```{r}
+ggplot(orings, aes(x = temp, y = damage/6)) +
+  geom_point() +
+  labs(x = "Temperature", y = "Prob of Damage")
+```
+
+## Let's create a linear model
+
+```{r, echo = TRUE}
+lm(damage/6 ~ temp, data = orings)
+```
+## Let's create a linear model
+
+```{r}
+ggplot(orings, aes(x = temp, y = damage/6)) +
+  geom_point() +
+  labs(x = "Temperature", y = "Prob of Damage") +
+  geom_smooth(method = "lm")
+```
+- What's the issue with this model?
+
+## Binomial Regression:
+
+- Assume response is distributed binomially $B(n_i, p_i)$ for each $i$ observation
+
+$$
+P(Y_i = y_i) = {n_i\choose y_i}p_i^{y_i}(1-p_i)^{n_i-y_i}
+$$
+- Let's construct a linear predictor with $q$ terms
+
+$$
+\eta_i = \beta_0 + \beta_1x_{i1} + \cdots + \beta_qx_{iq}
+$$
+- before we had the $\mu$ as our predictor in the normal density equation. What should we use now?
+
+## We need a link function
+
+- A link function is often used to transform the variable of interest (in this case $p_i$) to a reasonable scale for the linear predictor
+
+- Options
+   - Logit: $\eta = log(p/(1-p))$
+   - Probit: $\eta = \Phi^{-1}(p)$ where $\Phi$ is the normal cumulative distribution
+   - Complementary log-log: $\eta = log(-log(1-p))$
+
+## Link function graphs
+
+```{r}
+ggplot(data.frame(p = seq(0,1, length.out = 1000)), aes(x = p)) +
+  geom_line(aes(y = log(p/(1-p)), color = "logit")) + 
+  geom_line(aes(y = qnorm(p), color = "probit")) +
+  geom_line(aes(y = log(-log(1-p)), color = "cloglog")) +
+  labs(y = expression(eta))
+```
+
+## What tools do we use to solve this? {.build}
+
+- MLE!
+- Example with logistic function
+
+$$
+p =\frac{e^{\eta}}{e^{\eta} + 1}
+$$
+
+$$
+l(\beta) = \sum^n_{i = 1}\left[y_i\eta_i- n_ilog(1 + e^\eta_i) + log{n_i\choose y_i} \right]
+$$
+- see Appendix A for a bit more details
+
+
+## Run it in R
+
+```{r, echo = TRUE}
+logitmod <- glm(cbind(damage, 6 - damage) ~ temp, family = binomial(link = "logit"), data = orings)
+summary(logitmod)
+```
+
+## Compare links
+
+```{r}
+probitfit <- glm(cbind(damage, 6 - damage) ~ temp, family = binomial(link = "probit"), data = orings)
+
+fake_data <- data.frame(temp = seq(30, 80, length.out = 100))
+ggplot(orings, aes(x = temp, y = damage/6)) +
+  geom_point() +
+  labs(x = "Temperature", y = "Prob of Damage") +
+  geom_line(data = fake_data, aes(y = predict(logitmod, fake_data, type = "response"), linetype = "logit")) + 
+geom_line(data = fake_data, aes(y = predict(probitfit, fake_data, type = "response"), linetype = "probit")) +
+  geom_smooth(method = 'lm') +
+  coord_cartesian(ylim = c(0,1))
+```
+
+## How do we create predictions?
+
+```{r, echo = TRUE}
+eta <- 11.66 + 31*-.216
+exp(eta)/(exp(eta) + 1)
+
+predict(logitmod, data.frame(temp = 31), type = "response")
+```
+
+
+## Likelihood Ratio (Deviance)
+
+$$
+2log(\frac{L_L}{L_S})
+$$
+
+- $L_L$ has perfect fit to the data (e.g. $\hat{p_i} = y_i/n_i$) and is _constant_ for a given data set
+
+$$
+D = 2\sum^n_{i = 1}\left\{ y_ilog(\frac{y_i}{\hat{y_i}}) +(n_i - y_i)log\frac{n_i - y_i}{n_i - \hat y_i}  \right\}
+$$
+where $\hat y$ are the fitted models from the smaller model
+- This value is approximately $\chi^2$ distributed
+
+```{r}
+df.residual(logitmod)
+nrow(orings)
+pchisq(deviance(logitmod), df.residual(logitmod), lower = FALSE)
+```
+
+ - if p value is not significant than the model is not different than 'perfect fit'
+
+## Confidence Intervals
+
+$$
+\hat{\beta} \pm z^{(a/2)}se(\hat\beta_i)
+$$
+```{r}
+coef(logitmod)
+confint(logitmod)
+summary(logitmod)$coefficients
+```
+
+## Interperting Odds
+
+
+$$
+\frac{p}{1-p} = o \\
+p = \frac{o}{1+o}
+$$
+
+- unbounded $(0, \infty)$
+- log odds $(-\infty, \infty)$
+
+
+## Odds in regression
+
+$$
+log(\frac{p}{1-p}) = \beta_0 + \beta_1x_1 \\
+odds = e^{\beta_0}e^{\beta_1x_1}
+$$
+
+- this only applies to logit, hard to explain with probit, cloglog
+
+
+## Odds
+
+- let's say $x_1$ is a dummy variable (1 or 0)
+
+$$
+odds_1 = e^{\beta_0}e^{\beta_1} \\
+odds_0 = e^{\beta_0}
+$$
+
+- odds ratio
+
+$$
+\frac{odds_1}{odds_0} = e^{\beta_1}
+$$
+
+
+## Prospective and Retrospective Sampling
+
+- prospective sampling, predictors are fixed and the outcome is observed (cohort study)
+- retrospective sampling, outcome is fixed and the predictors are observed (case control study)
+    - probability of inclusion is independent of the predictor values
+
+## Choice of link function
+
+- I would use a sensitivity analysis but there aren't a lot of differences
+- Practically, logit is used almost every single time
+
+## Pearson Residuals
+
+- Pearson Residual
+
+$$
+r_i^P = (y_i - n_i\hat p)\sqrt{var(\hat y_i)}
+$$
+
+- this can be used in addition to deviance and is generally very close
+
+```{r}
+orings$res <- residuals(logitmod, type = "pearson")
+sum(orings$res^2)
+deviance(logitmod)
+```
+
+## Prediction of Effective Doses (bliss data)
+
+```{r}
+?bliss
+```
+
+
+## Prediction of Effective Doses (bliss data)
+
+
+```{r}
+data(bliss)
+
+ggplot(bliss, aes(x = conc, y = dead/(dead + alive))) +
+  geom_point()
+```
+
+## Fit a model to the data
+
+```{r, echo = TRUE}
+modl <- glm(cbind(dead, alive) ~ conc, family = binomial, data = bliss)
+lmodsum <- summary(modl)
+
+predict(modl, data.frame(conc = 2.5), se = TRUE)
+
+ilogit(
+  c(.58  + c(-1, 1)*1.96 *.2263)
+)
+
+```
+
+- there is no extra variance in predicting a single observation vs a mean (variance is built into prediction)
+
+
+## Lab with `pima` dataset (question 3 of excercise)
+
+```{r}
+summary(pima)
+mod <- glm(cbind(test, 1 - test) ~ ., data = pima, family = "binomial")
+summary(mod)
+pchisq(723.45, 759, lower = FALSE)
+pima %>% filter(glucose == 99, pregnant ==1 )
+```
+
+## Left out of lecture
+
+ - Tolerance Distribution
+ - Estimation Problems
+ - More details of Goodness of Fit
+ - Matched Case Control
+ - Over Dispersion
