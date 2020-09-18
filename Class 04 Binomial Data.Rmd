@@ -267,7 +267,7 @@ dev_null
 
 - degrees of freedom is the difference in df between the two models
 
-```{r}
+```{r, echo = TRUE}
 1 - pchisq(dev_null - dev_res, 2)
 ```
 
@@ -333,6 +333,7 @@ wcgs2 %>%
   geom_point() + 
   geom_smooth(method = 'loess')
 ```
+
 ## Plots of residuals 
 
 ```{r}
@@ -350,6 +351,7 @@ p2 <- wcgs2 %>%
 
 grid.arrange(p1, p2, ncol = 2)
 ```
+
 ## Leverage
 
 ```{r, echo = TRUE}
@@ -358,11 +360,13 @@ wcgs2 %>%
   arrange(-lev) %>% 
   dplyr::select(height, cigs, lev) 
 ```
-# Model Selection
+
+## Model Selection
 
 $$
 AIC = -2log \space L + 2q
 $$
+
 ```{r}
 wcgs2$bmi <- with(wcgs2, 703*weight/(height^2))
 lmod <- glm(chd ~ age + height + weight +bmi + sdp + dbp + chol + dibep + cigs +arcus, family=binomial, wcgs2)
