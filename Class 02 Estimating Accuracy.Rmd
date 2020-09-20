@@ -1,11 +1,12 @@
 ---
 title: "GLM I - Estimating Parameter Accuracy"
-subtitle: "September 10th, 2020 "
+subtitle: 'September 10th, 2020 '
 output:
   ioslides_presentation:
-    widescreen: true
-    smaller: true
-    
+    widescreen: yes
+    smaller: yes
+  slidy_presentation: default
+  beamer_presentation: default
 ---
 
 ```{r setup, include=FALSE}
