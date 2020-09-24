@@ -1,0 +1,190 @@
+---
+title: "GLM I - Binomial and Proportion Responses"
+subtitle: "September 24th, 2020 "
+output:
+  ioslides_presentation:
+    widescreen: true
+    smaller: true
+    
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(fig.align = 'center')
+library(faraway)
+library(dplyr)
+library(ggplot2)
+library(gridExtra)
+library(printr)
+
+theme_set(theme_minimal()) # automatically set a simpler ggplot2 theme for all graphics
+
+```
+
+
+# Binomial Regression Model
+
+## Generalized Bernoulli
+
+- $Y_i$ for $i = 1,..., n$ is binomially distributed $B(m_i, p_i)$
+
+$$
+P(Y_i = y_i) = {m_i \choose y_i}p_i^{y_i}(1-p_i)^{m_i - y_i}
+$$
+
+- For example there a $m$ coin flips with the same coin (e.g. a quarter) and $y$ heads. The quarter has probability $p$ for landing heads up.
+
+## Log-likelihood
+
+- Use logistic link function $\eta_i = log(p_i/(1-p_i))$
+- Use the same 
+$$
+l(\beta) = \sum^n_{i = 1}{y_i\eta_i - m_ilog(1 + e_i^\eta) + log{m_i \choose y_i}}
+$$
+
+## Challenger Example
+
+- O ring damage at different temperatures
+
+```{r}
+lmod <- glm(cbind(damage,6-damage) ~ temp, family=binomial,orings)
+fake_data <- data.frame(temp = 25:85)
+fake_data$pred <- predict(lmod, fake_data, type = "response")
+ggplot(orings, aes(x = temp, y = damage/6)) +
+  geom_point() + 
+  geom_line(data = fake_data, aes(y = pred), linetype = "longdash") +
+  scale_x_continuous(breaks = c(31, 40, 50, 60, 70, 80))
+
+```
+
+## Fit a binomial model
+
+```{r, echo = TRUE}
+lmod <- glm(cbind(damage,6-damage) ~ temp, family=binomial,orings)
+broom::tidy(lmod, conf.int = TRUE)
+
+faraway::ilogit(11.6630-0.2162*31)
+```
+
+## Deviance
+
+$$
+D = 2 \sum_{i=1}^n \left( \frac{y_ilog(y_i)}{\hat y_i} + \frac{(m_i - y_i)log(m_i-y_i)}{m_i - \hat y} \right)
+$$
+
+- Deviance is $\chi^2_{n-q-1}$ to check fit
+
+```{r, echo = TRUE}
+
+pchisq(deviance(lmod),df.residual(lmod),lower=FALSE)
+
+# NULL Model
+pchisq(38.9,22,lower=FALSE)
+
+broom::glance(lmod)
+```
+
+- This is an approximation (m > 5)
+
+## Compare Models
+
+1. Chi-squared:
+
+```{r, echo = TRUE}
+pchisq(38.9-16.9,1,lower=FALSE)
+```
+
+2. Z-value
+
+```{r}
+broom::tidy(lmod)
+```
+
+## Comparison to Bernoullli
+
+-  You 'ungroup' the data and run as bernoulli
+- You will get the same exact estimates (just no way to run goodness of fit test)
+
+## Pearson $\chi^2$
+
+$$
+X^2 = \sum\frac{(O - E)^2}{E}
+$$
+- For binomial case
+
+
+$$
+O_s = y, \space  O_f = n - y \\
+E_s = n_i\hat p, \space  E_f = n(1-\hat p) \\
+X^2 = \sum\frac{(y - n\hat p)^2}{n\hat p (1-\hat p )}
+
+$$
+
+- denominator is the variance of binomial variable
+
+## Pearson Residual
+
+$$
+r^p_i = \frac{y_i - n_i\hat p_i}{\sqrt{var(\hat y)}} \\
+X^2 = \sum (r^P_i)^2
+$$
+- It's useful to use this as a standardized residual
+
+# Overdispersion
+
+
+## Reasons for poor fit {.larger}
+
+- Incorrect model
+    - This is hard to show but sometimes you are limited by the data you have
+- Outliers
+    - Look at the residuals to see if they are driving deviance
+- Sparse data
+    - Small groups (when n = 1 it's binary and this is not valid)
+- Poor fit may result from an incorrect specification of the error term
+    - $ var(y) > mp(1-p) $ is overdispersion (if less than than under dispersion)
+    
+
+## Overdispersion Reasons
+
+- Missing predictor variable
+    - If temperature is not the only predictor (still missing information)
+
+- Clustering
+    - Imagine sample size $m$ with $k$ in each cluster and $l = m/k$ clusters
+    - Each cluster share the same $p_i$ so that the successes in cluster $i$ $\sim B(k, p_i)$
+    - $E p_i = p$ and $var \space p_i = \tau^2p(1-p)$
+    - successes $Y = Z_1 + \cdots + Z_l$
+
+## Overdispersion | Clustering
+
+$$
+EY = \sum EZ_i = \sum_{i = 1}^l kp_i = mp 
+$$
+$$
+var \space Y = \sum var Z_i = (1 + (k-1)\tau^2)mp(1-p)
+$$
+which is greater than $mp(1-p)$
+
+## Modeling Overdispersion
+
+- Dispersion Parameter
+- Quasi Binomial
+
+
+## Modeling Overdispersion | Dispersion Parameter
+
+$$
+var \space Y = \sigma^2 mp (1-p) \\
+
+\hat\sigma = \frac{X^2}{n - p}
+$$
+
+- what do we expect $\sigma$ to be if there is no overdispersion?
+
+## Modeling Overdispersion | Dispersion Parameter
+
+- This scales the standard error of all parameters by $\sigma
+
+
+
