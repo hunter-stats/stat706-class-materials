@@ -1,0 +1,13 @@
+I do not agree with the statement -- the slope of the regression line by itself is not sufficient to determine if the the training program works "on average". To determine if the program raises output on average, we have to verify if the following inequality holds:
+
+E[Y - X] > 0
+
+By the law of iterated expectations, the above inequality is equivalent to the following conditions:
+
+E[ E[ Y - X | X ] ] > 0
+E[ E[20 + .95 X - X | X] ] > 0
+20 - E[ E[.05X | X] ] > 0
+20 - .05E[X] > 0
+400 > E[X]
+
+That is, the program works on average only if E[X] is lower than 400. The program might work differently for different workers at the individual level, but at the population level, the program only works if the average initial output is sufficiently low.   
