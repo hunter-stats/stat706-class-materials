@@ -1,0 +1,110 @@
+---
+title: "PIMA Dataset"
+author: "Vitaly Druker"
+date: "9/24/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(ggplot2)
+```
+
+```{r}
+d <- rpart::kyphosis
+```
+
+
+```{r}
+
+d %>% glimpse
+
+?rpart::kyphosis
+```
+
+```{r}
+summary(d)
+```
+
+```{r}
+d %>% 
+  ggplot(aes(x = Start)) + 
+  geom_histogram()
+
+d %>% 
+  ggplot(aes(x = Age)) + 
+  geom_histogram()
+
+d %>% 
+  ggplot(aes(x = Number)) + 
+  geom_histogram(bins = 10)
+```
+
+
+```{r}
+d %>% 
+  ggplot(aes(x = Start, fill = Kyphosis)) +
+  geom_density(alpha = .4)
+
+d %>% 
+  ggplot(aes(x = Number, fill = Kyphosis)) +
+  geom_density(alpha = .4)
+
+d %>% 
+  ggplot(aes(x = Age, fill = Kyphosis)) +
+  geom_density(alpha = .4)
+```
+
+
+```{r}
+d %>% 
+  ggplot(aes(x = Age, y = Number)) +
+  geom_point() +
+  geom_smooth(method = 'loess', formula = y~ x)
+
+d %>% 
+  ggplot(aes(x = Age, y = Start)) +
+  geom_point() +
+  geom_smooth(method = 'loess', formula = y~ x)
+
+
+d %>% 
+  ggplot(aes(x = Number, y = Start)) +
+  geom_point() +
+  geom_smooth(method = 'loess', formula = y~ x)
+
+
+```
+
+```{r}
+library(broom)
+mod <- glm(Kyphosis ~ ., data = d, family = binomial)
+mod %>% 
+  tidy(conf.int = T, exponentiate = T)
+```
+
+```{r}
+mod2 <- step(mod)
+tidy(mod2)
+
+```
+
+```{r}
+d$fitted <- fitted.values(mod)
+
+d %>% 
+  ggplot(aes(x = fitted, y = as.numeric(Kyphosis == 'present'))) +
+  geom_point() +
+  geom_smooth() +
+  geom_abline(slope = 1, intercept = 0, linetype = "longdash") +
+  coord_cartesian(xlim  = c(0,1), y = c(0, 1))
+```
+
+```{r}
+?faraway::pima
+
+factor(c(0,1,1,0,1), levels = c(1, 0 ), labels = c('pos', 'neg'))
+
+```
+

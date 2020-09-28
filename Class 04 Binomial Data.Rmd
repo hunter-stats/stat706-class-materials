@@ -312,7 +312,7 @@ raw_res <- residuals(lmod, type = "response")
 - use deviance residual instead
 
 $$
-r_i = sign(y_i - \hat p_i)\sqrt{r_i^2}
+r_i = sign(y_i - \hat p_i)\sqrt{d_i^2}
 $$
 
 - The deviance residuals are not constrained to have mean zero so the mean level in
@@ -412,6 +412,7 @@ wcgs2 %>%
   geom_abline(slope = 1, intercept = 0, linetype = "longdash") +
   coord_cartesian(ylim = c(0,1))
 ```
+
 ## Scoring
 
 - Brier Score
@@ -424,6 +425,7 @@ $$
 $$
 \sum y log(\hat p) + (1-y) log(1 - \hat p)
 $$
+
 ## Confusion Matrix
 
 ```{r, echo = TRUE}
@@ -437,7 +439,7 @@ tabl
 
 - Accuracy = 
 
-```{r}
+```{r, echo = TRUE}
 (2882+2)/(2882+3+253+2)
 ```
 
@@ -453,7 +455,7 @@ tabl
 2882/(2882 + 3)
 ```
 
-Specificity (for those that have disease how many were correctly identified?) (chd  = yes)
+Sensitivity (for those that have disease how many were correctly identified?) (chd  = yes)
 
 ```{r}
 2/(253 + 2)
@@ -550,6 +552,7 @@ p2 <- ggplot(full_df, aes(x = 1- NPV, y = PPV)) +
 
 grid.arrange(p1, p2, ncol = 2)
 ```
+
 ## Not covered
 
 - $R^2$

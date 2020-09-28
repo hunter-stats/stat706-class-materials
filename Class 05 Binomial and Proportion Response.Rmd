@@ -114,6 +114,7 @@ $$
 
 
 $$
+
 O_s = y, \space  O_f = n - y \\
 E_s = n_i\hat p, \space  E_f = n(1-\hat p) \\
 X^2 = \sum\frac{(y - n\hat p)^2}{n\hat p (1-\hat p )}
