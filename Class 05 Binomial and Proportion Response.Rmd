@@ -224,6 +224,23 @@ troutegg %>%
   facet_wrap(~location) + coord_equal()
 ```
 
+<!-- ## Obs vs Exp Variation -->
+
+# ```{r}
+# troutegg %>%
+#   mutate(obs_var = ((survive/total)*(1-survive/total))) %>%
+#   mutate(exp_var = predict.glm(bmod, . ,se.fit = T, type = "response")$se) %>%
+#   ggplot(aes(x = obs_var, y = exp_var)) +
+#   geom_point() +
+#   geom_abline(slope = 1, intercept = 0)
+# 
+# var(troutegg$survive)
+# 
+# sum(troutegg$total)* sum(troutegg$survive)/sum(troutegg$total) * (1 - sum(troutegg$survive)/sum(troutegg$total))
+# ```
+
+
+
 
 ## Overdispersion Reasons
 
@@ -425,6 +442,10 @@ ggplot(copy_d, aes(x = body)) +
   geom_point(aes(y = pdr, color = "Actual")) +
   labs(y = "")
 ```
+
+
+
+
 
 ## Beta Regression
 
