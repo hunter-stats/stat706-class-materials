@@ -1,0 +1,66 @@
+---
+title: "Homework 4"
+author: "Vitaly Druker"
+date: "10/1/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+library(broom)
+library(dplyr)
+
+```
+
+
+
+```{r}
+data("turtle")
+d <- turtle
+```
+
+2 a
+```{r}
+
+
+
+```
+
+2 b
+
+```{r}
+mod_b <- glm(cbind(male, female) ~ temp, data = d, family = binomial)
+
+glance(mod_b)
+pchisq(25, 13, lower.tail = F)
+```
+
+```{r}
+d %>% 
+  ggplot(aes(x = temp, y = log((male + .5)/(female+.5)))) +
+  geom_point() +
+  geom_point(aes(y = predict(mod_b)), color = "red")
+```
+
+```{r}
+mod_f <- glm(cbind(male, female) ~ temp + I(temp^2), data = d, family = binomial)
+glance(mod_f)
+pchisq(20, 12, lower.tail = F)
+```
+
+
+```{r}
+d %>% 
+  mutate(obs_var = (prop_males*(1-prop_males))) %>% 
+  mutate(est_var = predict.glm(mod_f, . ,se.fit = T, type = "response")$se) %>% 
+  ggplot(aes(x = est_var, y = obs_var)) +
+  geom_point() +
+  geom_a
+
+
+mod_f <- glm(cbind(male, female) ~ temp + I(temp^2), data = d, family = quasibinomial)
+summary(mod_f
+        )
+```
+
