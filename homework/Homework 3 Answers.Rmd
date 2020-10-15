@@ -1,0 +1,183 @@
+---
+title: "Homework 3"
+author: "Vitaly Druker"
+date: "9/30/2020"
+output: html_document
+editor_options: 
+  chunk_output_type: inline
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Homework 3
+
+```{r}
+library(faraway)
+library(dplyr)
+library(ggplot2)
+```
+
+
+```{r}
+pima %>% summary()
+```
+
+
+```{r}
+d <- pima %>% 
+  mutate(test = factor(test, levels = c(0, 1), labels = c("neg", "pos")))
+
+d %>% 
+  ggplot(aes(x = insulin, fill = test)) +
+  geom_histogram(position = "dodge")
+```
+
+```{r}
+d$insulin[d$insulin == 0] <- NA
+
+d <- d %>% 
+  mutate_at(vars(glucose:bmi), ~ifelse(. == 0, NA, .))
+
+d %>% summary()
+
+d %>% 
+  filter(!is.na(insulin)) %>% 
+  ggplot(aes(x = insulin, fill = test)) +
+  geom_histogram(position = "dodge", binwidth = 10)
+```
+
+
+```{r}
+mod_c <- glm(test ~ . , data = d, family = "binomial")
+mod_c2 <- glm(test ~ pregnant + glucose + diastolic + bmi + diabetes + age + insulin + triceps, family = "binomial", data = d)
+nobs(mod_c)
+
+mod_d <- glm(test ~ pregnant + glucose + diastolic + bmi + diabetes + age, data = d, family= "binomial")
+nobs(mod_d)
+```
+
+```{r}
+d_complete <- d %>% 
+  filter(complete.cases(.))
+
+d_complete <-d[complete.cases(d), ]
+```
+
+
+```{r}
+mod_c <- glm(test ~ . , data = d_complete, family = "binomial")
+mod_d <- glm(test ~ pregnant + glucose + diastolic + bmi + diabetes + age, 
+             data = d_complete, 
+             family= "binomial")
+nobs(mod_c)
+nobs(mod_d)
+
+pchisq(deviance(mod_d) - deviance(mod_c), df.residual(mod_d) - df.residual(mod_c), lower.tail= FALSE)
+anova(mod_c, mod_d, test = "Chisq")
+```
+
+
+```{r}
+
+d_complete2 <- d_complete %>% 
+  mutate(CAT1 = sample(c("A", "B", "C"), size = nrow(d_complete), replace = T))
+
+mod_full <- glm(test ~ . + I(triceps^2) , data = d_complete2, family = "binomial")
+mod_full <- step(mod_full, trace = 0)
+nobs(mod_full)
+```
+
+
+```{r}
+d_any_missing <- d %>% 
+  mutate(any_missing = complete.cases(.))
+
+mod_missing_test <- glm(test ~ any_missing , data = d_any_missing, family = "binomial")
+mod_missing_test %>% summary()
+
+anova(mod_missing_test, test = "Chi")
+```
+
+
+```{r}
+bmi_1st <- quantile(d_complete$bmi, .25)
+bmi_3rd <- quantile(d_complete$bmi, .75)
+
+bmi_diff <- bmi_3rd - bmi_1st
+bmi_diff <- unname(bmi_diff)
+
+tidy_mod <- broom::tidy(mod_full, conf.int = T) %>% 
+    filter(term == "bmi")
+
+
+
+exp(tidy_mod$conf.low * bmi_diff)
+exp(tidy_mod$estimate * bmi_diff)
+exp(tidy_mod$conf.high * bmi_diff)
+
+
+tidy_mod %>% 
+  select(estimate, conf.low, conf.high) %>% 
+  mutate_all(~exp(.*bmi_diff))
+
+subjects <- data.frame(
+  pregnant = 1,
+  age = 10,
+  glucose = 119,
+  diastolic = 70,
+  triceps = 29,
+  insulin = 125, 
+  diabetes = 0.52,
+  bmi = c(bmi_1st + 10, bmi_3rd + 10)
+)
+
+
+x <- predict(mod_full, newdata = subjects, type = "response")
+(p1 <- x[1]) #28%, #16%
+# (o1 <- p1/(1-p1))
+
+(p2 <- x[2]) #43% 27%
+(o2 <- p2/(1-p2))
+
+o2/o1
+exp(tidy_mod$estimate * bmi_diff)
+
+broom::tidy(mod_full, conf.int = T)
+```
+
+
+```{r}
+d_new <- d_complete %>% 
+  mutate(bmi = bmi/bmi_diff) 
+
+
+d_new_mod <- glm(test ~ . , data = d_new, family = "binomial") %>% 
+  step(trace = 0) 
+
+broom::tidy(d_new_mod, exponentiate = T, conf.int = T) %>% 
+  filter(term == "bmi")
+
+bind_rows(
+broom::tidy(d_new_mod, exponentiate = T, conf.int = T) %>% 
+  filter(term == "bmi"),
+broom::tidy(mod_full, conf.int = T) %>% 
+  filter(term == "bmi") %>% 
+  mutate_at(vars(estimate, conf.low, conf.high), ~exp(.*bmi_diff))
+)
+```
+
+```{r}
+update(mod_full, . ~ . + diastolic) %>% broom::tidy(exponentiate = T)
+
+d_complete %>%
+  group_by(test) %>% 
+  summarise(diastolic_mean = mean(diastolic),
+            diastoic_se = sd(diastolic))
+
+
+glm(test ~ diastolic, data = d_complete, family = "binomial") %>% 
+  broom::tidy(exponentiate = T)
+```
+

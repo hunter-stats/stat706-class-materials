@@ -1,0 +1,147 @@
+---
+title: "Homework 4"
+author: "Vitaly Druker"
+date: "10/14/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(faraway)
+library(ggplot2)
+```
+
+```{r}
+d <- turtle %>% 
+  mutate(total = male + female,
+         prop = male/total)
+
+d %>% glimpse()
+```
+
+```{r}
+d %>% 
+  ggplot(aes(x = temp, y = prop)) +
+  geom_point()
+```
+
+## b
+
+```{r}
+mod_b <- glm(cbind(male, female) ~ temp, data = d, family = binomial)
+summary(mod_b)
+exp(2.2)
+pchisq(deviance(mod_b), df.residual(mod_b), lower.tail = FALSE)
+
+d$pred_mod_b <- predict(mod_b, d, type = "response")
+
+
+d_fake_data <- data.frame(temp = seq(27.2, 29.9, length.out = 100))
+d_fake_data$pred_mod_b <- predict(mod_b, d_fake_data, type = "response")
+
+d %>% 
+  ggplot(aes(x = temp, y = prop)) +
+  geom_point() +
+  # geom_smooth(method = "glm", method.args = list(family = "binomial")) +
+  geom_line(data = d_fake_data, aes(y = pred_mod_b), linetype = "longdash")
+
+
+test_data <- data.frame(x = rnorm(1000, mean = 10)
+           
+           )
+
+test_data$y <- test_data$x^2
+
+lm(y ~ x, data = test_data) %>% summary()
+
+```
+
+## c
+
+```{r}
+d %>% 
+  ggplot(aes(x = total)) +
+  geom_histogram()
+```
+
+
+```{r}
+halfnorm(residuals(mod_b, type = "pearson"))
+```
+
+
+```{r}
+d <- d %>% 
+  mutate(emp_logit = log((male + .5)/ (female = .5))) %>% 
+  mutate(mod1_pred = predict(mod_b, ., type = "response"))
+
+
+d %>% 
+  ggplot(aes(x = temp,  y = emp_logit)) +
+  geom_point()
+
+d %>% 
+  ggplot(aes(x = prop, y = mod1_pred)) +
+  geom_point() +
+  geom_abline(slope = 1, intercept = 0, linetype = "longdash") +
+  geom_smooth()
+
+
+d %>% 
+  ggplot(aes(x = temp, y = mod1_pred - prop)) +
+  geom_point() +
+  geom_hline(yintercept = 0, linetype = "longdash")
+```
+
+## f
+
+```{r}
+mod_f <- update(mod_b, . ~ . + I(temp^2))
+anova(mod_f, mod_b, test = "Chisq")
+
+pchisq(deviance(mod_f), df.residual(mod_f), lower.tail = F)
+```
+
+
+
+```{r}
+d %>% 
+  group_by(temp) %>% 
+  summarise(obs_var = var(prop),
+         exp_p = sum(male)/sum(male + female),
+         total_items = sum(male + female)) %>% 
+  ungroup() %>% 
+  mutate(exp_var = exp_p*(1-exp_p)/total_items) %>% 
+  ggplot(aes(x = obs_var, y = exp_var)) +
+  geom_label(aes(label = temp)) +
+  geom_abline(slope = 1, intercept = 0, linetype = "longdash") +
+  coord_equal(xlim = c(0, .03), ylim = c(0, .03))
+```
+
+
+```{r}
+d_grouped <- d %>% 
+  group_by(temp) %>% 
+  summarise_at(vars(male, female), sum)
+
+mod_h <- glm(cbind(male, female) ~ temp, data = d_grouped, family = binomial)
+# 
+# glm(cbind(male, female) ~ temp, data = d_grouped, family = quasibinomial) %>% summary()
+
+library(broom)
+tidy(mod_h, conf.int = T) %>% 
+  left_join(tidy(mod_h, conf.int = T), by = "term")
+
+bind_rows(
+  glance(mod_b),
+  glance(mod_h)
+)
+
+
+pchisq(deviance(mod_b), df.residual(mod_b), lower.tail = FALSE)
+pchisq(deviance(mod_h), df.residual(mod_h), lower.tail = FALSE)
+
+```
+
+
