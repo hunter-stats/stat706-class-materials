@@ -1,0 +1,299 @@
+---
+title: "GLM I - Variations on Logistic Regression"
+subtitle: "October 28th, 2020"
+output:
+  ioslides_presentation:
+    widescreen: true
+    smaller: true
+    transition: 0
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(fig.align = 'center')
+library(faraway)
+library(dplyr)
+library(ggplot2)
+library(gridExtra)
+library(printr)
+library(tibble)
+
+theme_set(theme_minimal()) # automatically set a simpler ggplot2 theme for all graphics
+```
+
+# Latent Variables
+
+## Set up
+
+- Suppose that students answer questions on a test and that a specific student has an aptitude T . A particular question might have difficulty d and the student will get the answer correct only if $T > d$.   Now if we consider d fixed and T as a random variable then the probability that the student gets the answer wrong is:
+
+$$
+p = P(T \le d ) = F (d)
+$$
+- this is the distribution function
+- how do we define the density function?
+
+## Function Definitions
+
+$$
+F(y) = \frac{ exp(y - \mu)}{1 + exp(y - \mu)}/\sigma
+$$
+$$
+logit(p) = -\mu/\sigma + d/\sigma \\
+logit(p) = \beta_0 + d\beta_1
+$$
+- this is now just a logistic regression model!
+
+## Graph
+
+- Assume difficulty (d) = 1
+- Latent Variable T has mean = -1 and sigma = 1
+- Note that the graph on the left appears normal
+
+```{r}
+test_data <- tibble(
+  x = seq(-6, 4, 0.1),
+  dens = dlogis(x, location = -1, scale = 1),
+  cumulative = plogis(x, location = -1, scale = 1)
+)
+
+p1 <- ggplot(test_data, aes( x = x, y = dens)) +
+  geom_line() +
+  geom_area(data = filter(test_data, x < 1), alpha = .3)
+
+p2 <- ggplot(test_data, aes(x = x, y = cumulative)) +
+  geom_line() +
+  geom_hline(yintercept = plogis(1, location = -1, scale = 1), linetype = "longdash") +
+  geom_vline(xintercept = 1, linetype = "longdash")
+
+grid.arrange(p1, p2, ncol = 2)
+```
+
+# Link Functions
+
+
+## Link Function Requirements
+
+- bounds the probability between 0 and 1
+- Monotonic
+
+## Other link functions in `glm`
+
+- Probit - where variable is normally distributed: $\eta = \Phi^{-1}(p)$
+- Complementary Log-log: $\eta = log(-log(1-p))$
+- Cauchit: $\eta = tan^{-1}(\pi(p-1/2))$
+
+
+## Show example with `bliss` data
+
+- look at different concentration of a drug
+
+```{r, echo = TRUE}
+bliss
+```
+
+```{r, echo = TRUE}
+mlogit <- glm(cbind(dead,alive) ~ conc, family=binomial, data=bliss)
+mprobit <- glm(cbind(dead,alive) ~ conc, family=binomial(link=probit), data=bliss)
+mcloglog <- glm(cbind(dead,alive) ~ conc, family=binomial(link=cloglog), data=bliss)
+mcauchit <- glm(cbind(dead,alive) ~ conc, family=binomial(link=cauchit), data=bliss)
+```
+
+
+## Look at Predictions
+
+```{r, echo = FALSE}
+new_data <- data.frame(conc =seq(0, 8, length.out = 100))
+
+purrr::map_dfc(list(logit = mlogit,
+                    probit = mprobit,
+                    cloglog = mcloglog,
+                    cauchit = mcauchit),
+               predict, newdata  = new_data, type = "response") %>% 
+  mutate(conc = new_data$conc) %>% 
+  tidyr::pivot_longer(logit:cauchit, names_to ="model") %>% 
+  ggplot(aes(x = conc, y = value, color = model)) +
+  geom_line() +
+  geom_vline(xintercept = c(0, 4), linetype = "dotted")
+```
+
+## Takeaways
+
+- The tails are different between these link functions making them important to look at when discussing poisons
+- There are substances whose harmful effects only become apparent at large dosages where the observed probabilities are sufficiently larger than zero to become estimable without immense sample sizes.
+- Asbestos is a good example of this, most studies use workers that are exposed to high levels of asbestos - but what about low levels over a long period of time?
+- Link function is typically logistic by default - it's easier to interprt
+
+# Prospective and Retrospective Sampling
+
+## Data Set up 
+
+- Infant respiratory disease in their first year by feeding and sex.
+
+```{r, echo = TRUE}
+xtabs(disease/(disease + nondisease) ~ sex + food, babyfood)
+```
+
+
+## Prosepctive vs Retrospective
+
+- Prospective - predictors are fixed and then the outcome is observed
+    - Also called a cohort study
+
+- retrospective - outcome is fixed and predictors are observed
+    - get a infants that have the outcome
+    - obtain a sample of infants without outcome
+    
+## Set up prospective study
+
+- just boys that are either breast or bottle fed
+
+```{r}
+babyfood[c(1,3),]
+```
+- given infant is breast fed - what are the log odds of having a respiratory disease?
+- given infant is bottle fed what are the log odds of resp disease?
+
+## Answer and difference
+
+```{r, echo = TRUE}
+# risk of bottle feeding
+log(77/381) - log(47/447)
+log((77/381)/(47/447))
+```
+
+- What does the difference represent? Is there an increase in risk from bottle feeding?
+
+
+## What if this was a retrospective study?
+
+```{r}
+babyfood[c(1,3),]
+```
+
+
+```{r, echo = TRUE}
+log(77/47) - log(381/447)
+```
+
+$$
+log(\frac{a/b}{c/d}) = log(\frac{ad}{bc}) = log(\frac{a/c}{b/d})
+$$
+- This is not the case with other link functions
+
+
+## Pros/Cons of each Study Type
+
+- Retrospective
+    - Easier to find rare/long term outcomes
+    - May not find all predictors
+
+- Prospective
+    - less susceptible to bias (in retrospective you must make sure that the populations for each outcome are similar/balanced)
+    - More control/possibly accurate in data collection
+    - Only prospective studies can generate proper predictions
+        - Why is that? What information are we missing in a retrospective design?
+
+## Covariates {.build}
+
+- let probability that individual is included in study if they do not have the disease = $\pi_0$
+- probability that individual is included in study if they have the disease = $\pi_1$
+
+- what is the relationship between these two in prospective study?
+
+    > - $\pi_0 = \pi_1$
+    
+- what is it in retrospective?
+
+    > - $\pi_1 > \pi_0$
+
+## Covariates
+
+- for a given x, $p^*(x)$ is the probability that an individual has the disease given that they were included in the study, while $p(x)$ is the  probability that someone has the disease regardless if they are in the study.
+
+$$
+p^*(x) = \frac{\pi_1p(x)}{\pi_1p(x) + \pi_0(1 - p(x))}
+$$
+
+$$
+logit(p^*(x)) = log(\pi_1/\pi_0) + logit(p(x))
+$$
+- this means that we can estimate effects of different covariates, but not necessary predict outcome.
+
+# Prediction and Effective Doses
+
+## Set up
+
+- Prediction and confidence intervals
+
+```{r, echo = TRUE}
+data(bliss, package="faraway")
+lmod <- glm(cbind(dead,alive) ~ conc, family=binomial,data=bliss)
+(lmodsum <- summary(lmod))
+```
+## Prediction
+
+```{r, echo = TRUE}
+(pred <- predict(lmod,newdata=data.frame(conc=2.5),se=T))
+
+ilogit(c(pred$fit) + c(-1, 1) * 1.96 * pred$se.fit)
+
+```
+
+## ED50
+
+- Effective dose 50 is when there is a 50% chance of outcome (in this case death)
+
+$$
+logit(p) = logit(1/2) = 0 = \beta_0 + \beta_1 * \hat{ED50} \\
+\hat{ED_{50}} = -\hat{\beta_0}/{\beta_1}
+$$
+```{r, echo = TRUE}
+(ld50 <- -lmod$coef[1]/lmod$coef[2])
+```
+
+
+## ED50 Standard Error
+
+- Use delta method to estimate variance of transformed parameter
+
+$$
+var(\hat{\theta}) = g'(\hat{\theta})^T var(\hat{\theta}) g'(\hat{\theta})
+$$
+
+```{r, echo = TRUE}
+dr <- c(-1/lmod$coef[2],lmod$coef[1]/lmod$coef[2]^2)
+sqrt(dr %*% lmodsum$cov.un %*% dr)[,]
+```
+
+```{r, echo = TRUE}
+# 95% CI
+c(2-1.96*0.178,2+1.96*0.178)
+```
+
+
+# Matched Case-Control Studies
+
+## Problem
+
+- How do we control for confounding?
+   - We can model away using regular regression techniques
+
+- Hard to do if confounding variables are not balanced between cases and controls
+
+## Matching groups
+
+
+- One way to deal with this is to match each patient with an outcome with another similar person without the outcome.
+- This becomes harder to do once you have more varibles/continous variables.
+- E.g. is a 56 year old man similar to a 55 year old man? What about a 56 year old woman?
+
+- Downsides
+    - You lose the ability to infer the properties of what you matched on. E.g. if you match on just age, then you won't be able to estimate the effect of age.
+    - Relative effects of others may be found - but not the absolute prediction of an outcome.
+    
+- This can also be done so that the contol set is matched more than 1:1 (e.g. 1:3 has 3 controls for each case)
+
+- See chapter 4.5 in book
+
+
