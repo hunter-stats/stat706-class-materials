@@ -36,7 +36,7 @@ $$
 ## Function Definitions
 
 $$
-F(y) = \frac{ exp(y - \mu)}{1 + exp(y - \mu)}/\sigma
+F(y) = \frac{ exp(y - \mu)/\sigma}{1 + exp(y - \mu)/\sigma}
 $$
 $$
 logit(p) = -\mu/\sigma + d/\sigma \\
@@ -258,7 +258,7 @@ $$
 - Use delta method to estimate variance of transformed parameter
 
 $$
-var(\hat{\theta}) = g'(\hat{\theta})^T var(\hat{\theta}) g'(\hat{\theta})
+var (g(\hat{\theta})) = g'(\hat{\theta})^T var(\hat{\theta}) g'(\hat{\theta})
 $$
 
 ```{r, echo = TRUE}
