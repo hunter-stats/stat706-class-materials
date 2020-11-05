@@ -1,0 +1,317 @@
+---
+title: "GLM I - Variations on Logistic Regression"
+subtitle: "November 5th, 2020"
+output:
+  ioslides_presentation:
+    widescreen: true
+    smaller: true
+    transition: 0
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(fig.align = 'center')
+library(faraway)
+library(dplyr)
+library(ggplot2)
+library(gridExtra)
+library(printr)
+library(tibble)
+library(purrr)
+
+theme_set(theme_minimal()) # automatically set a simpler ggplot2 theme for all graphics
+```
+
+# Poisson Regression
+
+## Set up
+
+- When the response is an unbounded count (0,1,2,3...) we can use a count regression model.
+- What about when count is bounded?
+
+If _Y_ is Poisson with mean $\mu$ > 0 then:
+
+$$
+P(Y = y) = \frac{e^{-\mu}\mu^y}{y!} \\
+y = 0,1,2, ... \\
+EY = var Y = \mu
+$$
+
+## Poisson Distribution
+
+```{r}
+mu <- c(0.5, 2 , 5)
+
+map_dfr(mu, function(mu) {
+  tibble(
+    y = 1:15,
+    p = dpois(y, lambda = mu),
+    mu = mu)
+  }) %>% 
+  ggplot(aes(x = y, y = p)) +
+  geom_bar(stat = "identity") +
+  facet_wrap(~mu)
+```
+
+## Poisson distribution
+
+- If count is number of possible total then binomial is better, but is a good approximation when n is large and p is small.
+
+- Probability of event is proportional to length of time and independent of other events. 
+
+- Time between events is exponentially distributed (basically the same as above)
+
+- Sum of Poisson variables is Poisson
+
+$$
+Y_i \sim Pois(\mu_i) \space i = 1,2, ...\\
+\sum_iY_i \sim Pois(\sum_i\mu_i)
+$$
+
+## Galapagos Data
+
+- for 30 Galapagos Islands we have a count of number of plants species found on each island
+
+```{r, echo = TRUE}
+data(gala, package = "faraway")
+d <- select(gala, -Endemics)
+summary(d)
+```
+
+## Galapagos Data | Normal Linear Regression
+
+```{r, echo = TRUE}
+modl <- lm(Species ~ . , d)
+plot(modl, 1)
+```
+
+## Galapagos Data | Square root transformation
+
+```{r, echo = TRUE}
+modt <- lm(sqrt(Species) ~ . , d)
+plot(modt, 1)
+```
+
+## Galapagos Data | Square root transformation
+
+```{r, echo = TRUE}
+summary(modt)
+```
+
+## Create Poisson Model {.build}
+
+- If $Y_i \sim Pois(\mu_i)$ what constraint is on $\mu$?
+
+
+- $\eta_i = x_i^T\beta$
+
+
+> - $log \mu_i = \eta_i = x_i^T\beta$
+
+
+$$
+l(\beta) = \sum_{i = 1} ^ n (y_i x_i^T \beta - exp(x_i^T \beta) - log(\y_i!))
+$$
+## Fit Poisson Model
+
+```{r, echo = TRUE}
+modp <- glm(Species ~ ., family=poisson, d)
+summary(modp)
+```
+
+## Deviance
+
+- You can use it the same way as before (goodness of fit and compare nested models)
+
+- Deviance (or G-statistic)
+
+$$
+D = 2 \sum_{i = 1} ^ n (y_i log(y_i/ \hat \mu_i) - (y_i - \hat \mu_i))
+$$
+
+- Pearson's $X^2$
+
+$$
+X^2 = \sum_{i = 1} ^ n\frac{(O-E)^2}{E} = \frac{(y_i - \hat \mu_i) ^ 2}{\hat \mu_i}
+$$
+
+# Dispersed Poisson Model
+
+## Overdispersion in Poisson
+
+- Same issues as binomial - variance is tied to mean
+
+```{r, echo = TRUE}
+broom::glance(modp)
+halfnorm(residuals(modp))
+```
+
+## Variance vs Mean
+
+- use $(y - \hat \mu)^2$ as an estimate of variance
+
+```{r}
+tibble(
+  hat_u = log(fitted(modp)),
+  est_var = log((gala$Species-fitted(modp))^2)
+) %>% 
+  ggplot(aes(x = hat_u, y = est_var)) +
+  geom_point() +
+  geom_abline(slope = 1, intercept = 0) +
+  coord_fixed(xlim = c(0, 10))
+```
+
+
+## Overdispersion
+
+- What can we say about the point estimates for parameters in the model?
+
+- What can we say about the standard error around those parameters?
+
+- We can add dispersion parameter such that $var \space Y = \phi\mu$
+
+- Estimate with:
+
+$$
+\hat \phi = \frac{X^2}{n - p} = \frac{\frac{(y_i - \hat \mu_i) ^ 2}{\hat \mu_i}}{n-p}
+$$
+
+## Overdispersion Application
+
+```{r}
+dp <- sum(residuals(modp,type="pearson")^2)/modp$df.res
+summary(modp, dispersion = dp)
+```
+## Overdispersion Application
+
+- you can use `quasipoisson` to do it all in one go
+- use F test to compare nested models
+
+# Rate Models
+
+## Set up
+
+- The number of variables may depend on a 'size' variable - but a binomial rate may not make sense
+- Any ideas for examples?
+- Some scaler (e.g. population or time)
+- When may a binomial not make sense?
+    - rate > 1
+    - multiple events per row
+    
+## Gamma Radiation on Chromosomal Abnormalities
+
+- outcome is the number of chromosomal abnormalities/cell
+
+```{r}
+data(dicentric, package="faraway")
+round(xtabs(ca/cells ~ doseamt+doserate, dicentric),2)
+```
+
+## Gamma Radiation on Chromosomal Abnormalities | Cont.
+
+```{r}
+ggplot(dicentric, aes(x = doserate, y = ca/cells, linetype = as.factor(doseamt))) +
+  geom_line()
+```
+
+## Model
+
+```{r}
+lmod <- lm(ca/cells ~ log(doserate)*factor(doseamt), dicentric)
+summary(lmod)$adj
+plot(lmod, 1)
+```
+
+## Use Poisson
+
+```{r, echo = TRUE}
+dicentric$dosef <- factor(dicentric$doseamt)
+pmod <- glm(ca ~ offset(log(cells)) +log(doserate)*dosef, family=poisson,data = dicentric)
+summary(pmod)
+```
+
+## How does offset work?
+
+$$
+log(ca/cells) = X\beta \\
+log(ca) = log(cells) + X\beta
+$$
+## Interaction Term
+
+```{r, echo = TRUE}
+pmod_no_inter <- glm(ca ~ offset(log(cells)) +log(doserate) + dosef, family=poisson,data = dicentric)
+dicentric_fit <- dicentric
+dicentric_fit$fitted <- fitted.values(pmod)
+dicentric_fit$fitted_no_inter <- fitted.values(pmod_no_inter)
+```
+
+## Interaction Term | Plot
+
+```{r, echo = TRUE}
+p <- ggplot(dicentric, aes(x = doserate, y = ca/cells, linetype = as.factor(doseamt))) +
+  geom_line() +
+  geom_line(data = dicentric_fit, aes(y = fitted/cells, color = "Interaction")) +
+  geom_line(data = dicentric_fit, aes(y = fitted_no_inter/cells, color = "No Interaction")) +
+  scale_x_log10() +
+  scale_y_log10()
+```
+
+## Interaction Term | Plot
+
+```{r}
+p
+```
+
+# Negative Binomial
+
+## Setup
+
+- given a series of independent trials, each with probability success p, let Z be the number of trials unl the kth success.
+
+$$
+P(Z = z) = \binom{z-1}{k-1}p^k(1-p)^{z-k} \\
+z = k, k+1, ...
+$$
+
+- reparameterize so that $Y = Z-k$ and $p = (1 + \alpha)^{-1}$
+- $E Y = \mu = k\alpha$ and $var Y = k\alpha + k \alpha^2 = \mu + \mu^2/k$
+
+## Solder Data
+
+```{r}
+data(solder, package="faraway")
+modp <- glm(skips ~ . , family=poisson, data=solder)
+c(deviance(modp), df.residual(modp))
+```
+
+## Fit model with fixed K
+
+```{r}
+library(MASS)
+modn <- glm(skips ~ .,negative.binomial(1),solder)
+summary(modn)
+```
+
+## Fit model with parameter K
+
+```{r}
+modn <- glm.nb(skips ~ .,solder)
+summary(modn)
+```
+
+# Zero Inflated Count Models
+
+## Set up
+
+- We often see situations where there are more 0's than would be expected by either of these models.
+- We consider a sample of 915 biochemistry graduate students as analyzed by Long (1990). The response is the number of articles produced during the last three years of the PhD.We are interested in how this is related to the gender, marital status, number of children, prestige of the department and productivity of the advisor of the student.
+
+```{r, echo = TRUE}
+library(pscl)
+modp <- glm(art ~ ., data=bioChemists, family=poisson)
+summary(modp)
+```
+
+
+
+

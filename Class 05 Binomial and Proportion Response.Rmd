@@ -278,9 +278,6 @@ broom::tidy(sim_mod, exponentiate  = T)
 ```
 
 
-##
-
-
 
 ## Modeling Overdispersion \| Dispersion Parameter
 
@@ -430,9 +427,10 @@ copy_d$log_body_pred <- predict(mod_log, copy_d, type = "response")
 ## Look at fake data
 
 ```{r}
-ggplot(fake_data, aes(x = body)) +
+ggplot(fake_data, aes(x = (body))) +
   geom_line(aes( y = linear_body_pred, color = "Linear")) +
-  geom_line(aes( y = log_body_pred, color = "Log"))
+  geom_line(aes( y = log_body_pred, color = "Log")) +
+  scale_x_log10()
 ```
 
 ## Fake data zoom in
