@@ -1,0 +1,40 @@
+---
+title: "Final Notes"
+subtitle: "August 27th, 2020"
+output:
+  ioslides_presentation:
+    incremental: true
+    widescreen: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(ggplot2)
+```
+
+
+
+```{r}
+
+get_substr <- function(s) {
+  l <- length(s)
+  x <- substr(s, 4, l)
+  x
+}
+ratings = read.csv("~/src/stat706-class-materials/movies-data/ratings_small.csv")
+keywords = read.csv("~/src/stat706-class-materials/movies-data/keywords.csv")
+metadata = read.csv("~/src/stat706-class-materials/movies-data/movies_metadata.csv")
+metadata$cleaned_imdb_id <- get_substr(metadata$imdb_id)
+links <- read.csv("~/src/stat706-class-materials/movies-data/links_small.csv")
+ratings_linked <- merge(ratings, links, by = "movieId")
+merged <- merge(ratings_linked)
+
+merged
+```
+
+```{r}
+ggplot(merged, aes(x=budget, y=revenue)) + geom_point() + geom_jitter()
+ggplot(merged, aes(x=budget, y=rating)) + geom_point() + geom_jitter()
+ggplot(merged, aes(x=popularity, y=rating)) + geom_point() + geom_jitter()
+ggplot(merged, aes(x=runtime, y=rating)) + geom_point() + geom_jitter()
+```
