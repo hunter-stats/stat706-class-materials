@@ -6,6 +6,6 @@
 .DS_Store
 homework/
 .terraform/
-terraform.tfstate.*
+terraform.tfstate*
 *.tf~
 *.tf#
