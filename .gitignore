@@ -9,3 +9,4 @@ homework/
 terraform.tfstate*
 *.tf~
 *.tf#
+*.sh~
