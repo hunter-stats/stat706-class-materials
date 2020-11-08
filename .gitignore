@@ -5,3 +5,5 @@
 .Rprofile
 .DS_Store
 homework/
+.terraform/*
+terraform.tfstate.*
