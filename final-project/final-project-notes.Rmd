@@ -22,19 +22,29 @@ get_substr <- function(s) {
   x
 }
 ratings = read.csv("~/src/stat706-class-materials/movies-data/ratings_small.csv")
+ratings
+
 keywords = read.csv("~/src/stat706-class-materials/movies-data/keywords.csv")
+keywords
+
+
 metadata = read.csv("~/src/stat706-class-materials/movies-data/movies_metadata.csv")
 metadata$cleaned_imdb_id <- get_substr(metadata$imdb_id)
+metadata
+
 links <- read.csv("~/src/stat706-class-materials/movies-data/links_small.csv")
 ratings_linked <- merge(ratings, links, by = "movieId")
-merged <- merge(ratings_linked)
+ratings_linked 
 
+merged <- merge(m1, metadata, by.x = "tmdbId", by.y = "cleaned_imdb_id")
 merged
 ```
 
 ```{r}
 ggplot(merged, aes(x=budget, y=revenue)) + geom_point() + geom_jitter()
 ggplot(merged, aes(x=budget, y=rating)) + geom_point() + geom_jitter()
+ggplot(merged, aes(x=revenue, y=rating)) + geom_point() + geom_jitter()
 ggplot(merged, aes(x=popularity, y=rating)) + geom_point() + geom_jitter()
-ggplot(merged, aes(x=runtime, y=rating)) + geom_point() + geom_jitter()
+ggplot(merged, aes(x=release_date, y=rating)) + geom_point() + geom_jitter()
+ggplot(merged, aes(x=release_date, y=revenue)) + geom_point() + geom_jitter()
 ```
