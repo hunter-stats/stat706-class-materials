@@ -7,3 +7,5 @@
 homework/
 .terraform/*
 terraform.tfstate.*
+*.tf~
+*.tf#
