@@ -50,7 +50,7 @@ resource "aws_instance" "bastion" {
     source      = "~/.kaggle/kaggle.json"
     destination = "/home/ec2-user/kaggle.json"
   }
-  
+
   tags = {
     Name = "stat-706-bastion"
   }
@@ -87,6 +87,7 @@ resource "aws_db_instance" "database" {
   username               = var.db_username
   password               = var.db_password
   vpc_security_group_ids = [aws_security_group.database.id]
+  skip_final_snapshot    = true
 }
 
 output "public_ip" {
