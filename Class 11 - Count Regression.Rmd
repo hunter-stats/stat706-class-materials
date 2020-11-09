@@ -1,5 +1,5 @@
 ---
-title: "GLM I - Variations on Logistic Regression"
+title: "GLM I - Count Regression"
 subtitle: "November 5th, 2020"
 output:
   ioslides_presentation:
@@ -110,8 +110,9 @@ summary(modt)
 
 
 $$
-l(\beta) = \sum_{i = 1} ^ n (y_i x_i^T \beta - exp(x_i^T \beta) - log(\y_i!))
+l(\beta) = \sum_{i = 1} ^ n (y_i x_i^T \beta - exp(x_i^T \beta) - log(y_i!))
 $$
+
 ## Fit Poisson Model
 
 ```{r, echo = TRUE}
@@ -178,7 +179,7 @@ $$
 
 ## Overdispersion Application
 
-```{r}
+```{r, echo = TRUE}
 dp <- sum(residuals(modp,type="pearson")^2)/modp$df.res
 summary(modp, dispersion = dp)
 ```
@@ -186,6 +187,15 @@ summary(modp, dispersion = dp)
 
 - you can use `quasipoisson` to do it all in one go
 - use F test to compare nested models
+
+
+
+```{r}
+
+
+
+
+```
 
 # Rate Models
 
@@ -278,7 +288,7 @@ $$
 
 ## Solder Data
 
-```{r}
+```{r, echo = TRUE}
 data(solder, package="faraway")
 modp <- glm(skips ~ . , family=poisson, data=solder)
 c(deviance(modp), df.residual(modp))
@@ -286,7 +296,7 @@ c(deviance(modp), df.residual(modp))
 
 ## Fit model with fixed K
 
-```{r}
+```{r, echo = TRUE}
 library(MASS)
 modn <- glm(skips ~ .,negative.binomial(1),solder)
 summary(modn)
@@ -294,7 +304,7 @@ summary(modn)
 
 ## Fit model with parameter K
 
-```{r}
+```{r, echo = TRUE}
 modn <- glm.nb(skips ~ .,solder)
 summary(modn)
 ```

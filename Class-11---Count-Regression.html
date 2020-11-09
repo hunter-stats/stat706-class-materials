@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>GLM I - Variations on Logistic Regression</title>
+  <title>GLM I - Count Regression</title>
 
   <meta charset="utf-8">
   <meta http-equiv="X-UA-Compatible" content="chrome=1">
@@ -19,7 +19,7 @@
     var SLIDE_CONFIG = {
       // Slide settings
       settings: {
-                title: 'GLM I - Variations on Logistic Regression',
+                title: 'GLM I - Count Regression',
                         subtitle: 'November 5th, 2020',
                 useBuilds: true,
         usePrettify: true,
@@ -3300,8 +3300,10 @@ plot(modt, 1)</pre>
 </ul>
 
 <p>\[
-l(\beta) = \sum_{i = 1} ^ n (y_i x_i^T \beta - exp(x_i^T \beta) - log(\y_i!))
-\] ## Fit Poisson Model</p>
+l(\beta) = \sum_{i = 1} ^ n (y_i x_i^T \beta - exp(x_i^T \beta) - log(y_i!))
+\]</p>
+
+</article></slide><slide class=""><hgroup><h2>Fit Poisson Model</h2></hgroup><article  id="fit-poisson-model" class="smaller ">
 
 <pre class = 'prettyprint lang-r'>modp &lt;- glm(Species ~ ., family=poisson, d)
 summary(modp)</pre>
@@ -3411,6 +3413,9 @@ X^2 = \sum_{i = 1} ^ n\frac{(O-E)^2}{E} = \frac{(y_i - \hat \mu_i) ^ 2}{\hat \mu
 \]</p>
 
 </article></slide><slide class=""><hgroup><h2>Overdispersion Application</h2></hgroup><article  id="overdispersion-application" class="smaller ">
+
+<pre class = 'prettyprint lang-r'>dp &lt;- sum(residuals(modp,type=&quot;pearson&quot;)^2)/modp$df.res
+summary(modp, dispersion = dp)</pre>
 
 <pre >## 
 ## Call:
@@ -3608,9 +3613,15 @@ z = k, k+1, ...
 
 </article></slide><slide class=""><hgroup><h2>Solder Data</h2></hgroup><article  id="solder-data" class="smaller ">
 
+<pre class = 'prettyprint lang-r'>data(solder, package=&quot;faraway&quot;)
+modp &lt;- glm(skips ~ . , family=poisson, data=solder)
+c(deviance(modp), df.residual(modp))</pre>
+
 <pre >## [1] 1829.002  882.000</pre>
 
 </article></slide><slide class=""><hgroup><h2>Fit model with fixed K</h2></hgroup><article  id="fit-model-with-fixed-k" class="smaller ">
+
+<pre class = 'prettyprint lang-r'>library(MASS)</pre>
 
 <pre >## 
 ## Attaching package: &#39;MASS&#39;</pre>
@@ -3618,6 +3629,9 @@ z = k, k+1, ...
 <pre >## The following object is masked from &#39;package:dplyr&#39;:
 ## 
 ##     select</pre>
+
+<pre class = 'prettyprint lang-r'>modn &lt;- glm(skips ~ .,negative.binomial(1),solder)
+summary(modn)</pre>
 
 <pre >## 
 ## Call:
@@ -3659,6 +3673,9 @@ z = k, k+1, ...
 ## Number of Fisher Scoring iterations: 9</pre>
 
 </article></slide><slide class=""><hgroup><h2>Fit model with parameter K</h2></hgroup><article  id="fit-model-with-parameter-k" class="smaller ">
+
+<pre class = 'prettyprint lang-r'>modn &lt;- glm.nb(skips ~ .,solder)
+summary(modn)</pre>
 
 <pre >## 
 ## Call:
