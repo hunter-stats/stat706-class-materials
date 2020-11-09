@@ -1,0 +1,154 @@
+---
+title: "GLM I - Multinomial Data"
+subtitle: "November 12th, 2020"
+output:
+  ioslides_presentation:
+    widescreen: true
+    smaller: true
+    transition: 0
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(fig.align = 'center')
+library(faraway)
+library(dplyr)
+library(ggplot2)
+library(gridExtra)
+library(printr)
+library(tibble)
+library(purrr)
+
+theme_set(theme_minimal()) # automatically set a simpler ggplot2 theme for all graphics
+```
+
+# Multinomial Logit Model (Chapter 7)
+
+## Set Up
+- (Note we are skipping Chapter 6)
+- A multinomial distribution is an extension of the binomial where the response can take more than two values. 
+- Let $Y_i$ be a random variable that falls into one of a finite number of categories (1, 2 ... _J_)
+- $p_{ij} = P(Y_i = j)$ and $\sum_{j=1}^J p_{ij} = 1$
+- When does this become the binary case?
+
+- Let $Y_{ij}$ by the number of observations that fall into category _j_ for observation _i_. $n_i = \sum_j Y_{ij}$
+- What are $n_i$ and $J$ for Bernoulli?
+
+$$
+P(Y_{i1} = y_{i1}, ..., Y_{iJ} = y_{iJ}) = \frac{n_i}{y_{i1}!...y_{iJ}!} p_{i1}^{y_{i1}} ... p_{iJ}^{y_{iJ}}
+$$
+
+- ordinal vs multinomial data
+
+## Election Study :)
+
+- collapse party into 3 categories and create numeric value for income (code not shown)
+
+```{r, echo = FALSE}
+data(nes96, package="faraway")
+party <- nes96$PID
+levels(party) <- c("Democrat","Democrat","Independent","Independent", "Independent","Republican","Republican")
+inca <- c(1.5,4,6,8,9.5,10.5,11.5,12.5,13.5,14.5,16,18.5,21,23.5, 27.5,32.5,37.5,42.5,47.5,55,67.5,82.5,97.5,115)
+income <- inca[unclass(nes96$income)]
+rnes96 <- data.frame(party, income, education=nes96$educ, age=nes96$age)
+```
+
+
+```{r, echo = TRUE}
+summary(rnes96)
+```
+
+## Some Graphs - Party by Education
+
+```{r}
+rnes96 %>% 
+  group_by(education, party) %>% 
+  summarise(n = n(), .groups = "drop_last") %>% 
+  mutate(prop = n/sum(n)) %>% 
+  ggplot(aes(x = education, y = prop, linetype = party)) +
+  geom_line(aes(group = party))
+```
+
+## Some more graphs - Party by Income
+
+```{r}
+rnes96 %>% 
+  group_by(income, party) %>% 
+  summarise(n = n(), .groups = "drop_last") %>% 
+  mutate(prop = n/sum(n)) %>% 
+  ggplot(aes(x = income, y = prop, color = party, weight = n)) +
+  geom_point(alpha = .3) +
+  geom_smooth(method = "loess", se = F, formula = y ~ x)
+```
+
+## Fit the Model
+
+```{r, echo = TRUE, message=FALSE}
+library(nnet)
+mmod <- multinom(party ~ age + education + income, rnes96)
+mmodi <- step(mmod, trace = 0) # we can also use deviance etc.
+```
+
+## Lets just look at income
+
+```{r echo = TRUE}
+fake_data <- data.frame(income = 1:110)
+fake_data <- cbind(fake_data, predict(mmodi, fake_data, type = "probs"))
+summary(fake_data)
+```
+## Income as a graph
+
+```{r echo=TRUE, fig.height=3, fig.width=6}
+fake_data %>% 
+  tidyr::pivot_longer(-income) %>% 
+  ggplot(aes( x = income, y = value, color = name)) +
+  geom_line()
+```
+
+- what will be chosen as the prediction at different income levels?
+- Will independent ever be chosen?
+
+## Interpret Coefficients
+
+```{r, echo = TRUE}
+broom::tidy(mmodi)
+```
+
+
+## Interpret Coefficients
+
+$$
+\eta_{ij} = x^T_i \beta_j = log(\frac{p_{ij}}{p_{i1}})
+$$
+
+- One category is baseline such that:
+
+$$
+p_{i1} = 1 - \sum^J_{j = 2} p_{ij}
+$$
+
+- Therefore:
+
+$$
+p_{ij} = \frac{exp(\eta_{ij})}{1 + \sum^J_{j=2} exp(\eta_{ij})} \\
+ = \frac{exp(\eta_{ij})}{\sum^J_{j=1} exp(\eta_{ij})}
+$$
+Why?
+
+
+## Interpret Coefficients (intercept)
+
+```{r, echo = TRUE}
+cc <- c(0,-1.17493,-0.95036)
+exp(cc)/sum(exp(cc))
+
+predict(mmodi,data.frame(income=0),type="probs")
+```
+
+## Interpret Coefficients
+
+```{r, echo = TRUE}
+broom::tidy(mmodi, exponentiate = TRUE)
+```
+
+- What about log odds from independent to republican?
