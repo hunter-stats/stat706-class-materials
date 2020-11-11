@@ -18,6 +18,7 @@ library(gridExtra)
 library(printr)
 library(tibble)
 library(purrr)
+library(broom)
 
 theme_set(theme_minimal()) # automatically set a simpler ggplot2 theme for all graphics
 ```
@@ -152,3 +153,137 @@ broom::tidy(mmodi, exponentiate = TRUE)
 ```
 
 - What about log odds from independent to republican?
+
+
+# Hierarchical or Nested Responses
+
+## Set Up
+
+- Live births with deformations of the central nervous system
+
+```{r, echo = TRUE}
+data(cns, package="faraway")
+cns %>% summary
+```
+
+## Outcome
+
+
+- 4 Groups, but really:
+
+```{r}
+knitr::include_graphics('resources/class 12 - cns.png')
+```
+
+## Modeling - Equations
+
+$$
+p_{i1}^{y_{i1}}p_{i2}^{y_{i2}}p_{i3}^{y_{i3}}p_{i4}^{y_{i4}}
+$$
+create a new variables $p_{ic} = p_{i2} + p_{i3} + p_{i4}$ - what does this represent?
+
+Rewrite above as:
+
+$$
+p_{i1}^{y_{i1}}p_{ic}^{y_{i2} + y_{i3} + y_{i4}} \left(\frac{p_{i2}}{p_{ic}}\right)^{y_{i2}} \left(\frac{p_{i3}}{p_{ic}}\right)^{y_{i3}} \left(\frac{p_{i4}}{p_{ic}}\right)^{y_{i4}} 
+$$
+- first part is now a binomial and second part of the product is multinomial likelihood conditional on presence of CNS
+
+## Modeling - Binomial Part
+
+
+```{r, echo = TRUE}
+cns$CNS <- cns$An+cns$Sp+cns$Other
+ggplot(cns, aes(x = Water, y = log(CNS/NoCNS))) +
+  geom_label(aes(label = Work, fill = Work))
+```
+
+## Fitting Model
+
+
+```{r, echo = TRUE}
+# issue fitting - Water and Area are linked
+full_mod <- glm(cbind(CNS, NoCNS) ~ Water + Work + Area, data = cns, family = binomial)
+mod1 <- glm(cbind(CNS, NoCNS) ~ Water + Work, data = cns, family = binomial)
+mod2 <- glm(cbind(CNS, NoCNS) ~ Area + Work, data = cns, family = binomial)
+
+AIC(mod1)
+AIC(mod2)
+```
+
+## Explore Residuals
+
+```{r}
+halfnorm(residuals(mod1))
+```
+
+## Explore Residuals further
+
+```{r}
+mod1$data[10, ]
+```
+
+```{r, echo = TRUE}
+mod1_no_out <- update(mod1, data = cns[-10, ])
+glance(mod1)
+glance(mod1_no_out)
+```
+
+
+- no real difference in estimates so lets keep it in
+
+```{r, eval = FALSE, echo = TRUE}
+tidy(mod1)
+tidy(mod1_no_out)
+```
+
+## Binomial model - interpertation
+
+```{r, echo = TRUE}
+tidy(mod1, exponentiate = T)
+```
+- increase in 100 water hardness
+
+```{r, echo = TRUE}
+exp(mod1$coefficients['Water']*100)
+```
+
+
+## Create Multinomial
+
+```{r, message = FALSE}
+cmmod <- multinom(cbind(An,Sp,Other) ~ Water + Work, cns)
+summary(cmmod)
+```
+
+## Create Multinomial - step
+
+```{r}
+cmmod <- (step(cmmod))
+```
+
+## Multi-step Output
+
+```{r}
+summary(cmmod)
+```
+## Show Rates
+
+```{r, echo = TRUE}
+cc <- c(0, as.vector(coef(cmmod)))
+names(cc) <- c("An","Sp","Other") 
+exp(cc)/sum(exp(cc))
+```
+
+
+```{r, echo = TRUE}
+colSums(cns %>% select(An, Sp, Other ))/sum(cns$CNS)
+```
+
+
+## Multinomial model on all the data
+
+```{r}
+summary(multinom(cbind(NoCNS,An,Sp,Other) ~ Water + Work, cns))
+```
+
