@@ -12,6 +12,7 @@ output:
 knitr::opts_chunk$set(echo = FALSE)
 knitr::opts_chunk$set(fig.align = 'center')
 library(faraway)
+library(MASS)
 library(dplyr)
 library(ggplot2)
 library(gridExtra)
@@ -285,5 +286,119 @@ colSums(cns %>% select(An, Sp, Other ))/sum(cns$CNS)
 
 ```{r}
 summary(multinom(cbind(NoCNS,An,Sp,Other) ~ Water + Work, cns))
+```
+
+# Ordinal Multinomial Responses
+
+## Setup
+
+- J ordered categories with ordinal response
+
+```{r, echo = TRUE}
+letter_samp <- sample(LETTERS[1:5], 100, replace = T)
+table(letter_samp)
+cumsum(table(letter_samp))
+```
+
+- $\gamma_{ij} = P(Y_i \leq j)$:
+
+```{r}
+cumsum(table(letter_samp))/100
+```
+
+## Link Functions
+
+- $\theta$ does not depend on predictors $x$
+- $\beta$ does not depend on categories
+
+$$
+g(\gamma_{ij}) = \theta_j - x_i^T\beta
+$$
+- link functions for $g$ are logit, probit an cloglog
+
+
+## Latent Variable interpertation
+
+- Suppose there is a true continuous variable ($Z_i$) that we only observe through a discritized version ($Y_i$) where $Y_i = j$ is observed if $\theta_{j-1} < Z_i \leq \theta_j$.
+- Suppose that $Z_i - \beta^Tx_i$ has distribution $F$ then:
+
+$$
+P(Y_i \leq j) = P(Z_i \leq \theta_j) = P(Z_i - \beta^Tx_i \leq \theta_j - \beta^Tx_i) = F(\theta_j - \beta^Tx_i)
+$$
+- Choosing different underlying latent variable distributions leads to different link functions
+
+## Visualization
+
+```{r}
+letters_df <- data.frame(y = letter_samp)
+podds <- polr(y ~ 1, letters_df)
+
+df_lab <- tibble(
+  x = c(-2, ((podds$zeta + lag(podds$zeta))/2)[-1], 2),
+  y = .075,
+  label = c("A", "B", "C", "D", "E")
+  
+  
+)
+
+tibble(x = seq(-3, 3, by = 0.1),
+       y = dlogis(x)) %>% 
+  ggplot(aes(x = x, y = y)) +
+  geom_line() +
+  geom_vline(xintercept = podds$zeta, linetype = "longdash") +
+  geom_label(data = df_lab, aes(label = label))
+```
+
+## Proportional Odds
+
+
+```{r,out.width="100%"}
+knitr::include_graphics('resources/class-12-prop-odds.png')
+```
+
+
+## Fitting a model
+
+- All likelihood methods apply (deviance, AIC etc)
+
+```{r, echo  = TRUE}
+library(MASS)
+pomod <- polr(party ~ age + education + income, rnes96)
+pomodi <- step(pomod)
+```
+
+## Check prop odds
+
+```{r}
+pim <- with(rnes96,prop.table(table(income,party),1)) 
+plot(logit(pim[,1])-logit(pim[,1]+pim[,2])) # from dem to ind
+```
+
+## Interpertation
+
+```{r}
+summary(pomodi)
+```
+- We can say that the odds of moving from Democrat to Independent/Republican category (or from Democrat/Independent to Republican) increase by a factor of exp(0.013120) = 1.0132 as income increases by one unit ($1000)
+
+## Predicted Probs
+
+income = 0, Dem
+
+```{r, echo = TRUE}
+ilogit(0.209)
+```
+
+income = 0, Ind
+
+```{r, echo = TRUE}
+ilogit(1.292)-ilogit(0.209)
+```
+
+## Generalization
+
+- move to book if we get here
+```{r, include = FALSE}
+library(VGAM)
 ```
 
