@@ -87,8 +87,15 @@ rnes96 %>%
 
 ```{r, echo = TRUE, message=FALSE}
 library(nnet)
+rnes96_not_ordinal <- rnes96
+rnes96_not_ordinal$education <- factor(rnes96_not_ordinal$education, ordered = FALSE)
+mmod_not_ord <- multinom(party ~ age + education + income, rnes96_not_ordinal)
 mmod <- multinom(party ~ age + education + income, rnes96)
-mmodi <- step(mmod, trace = 0) # we can also use deviance etc.
+
+AIC(mmod_not_ord)
+AIC(mmod)
+
+mmodi <- step(mmod, trace = 1) # we can also use deviance etc.
 ```
 
 ## Lets just look at income
@@ -153,6 +160,18 @@ predict(mmodi,data.frame(income=0),type="probs")
 broom::tidy(mmodi, exponentiate = TRUE)
 ```
 
+```{r}
+rnes96_relevel <- rnes96
+rnes96_relevel$party <- relevel(factor(rnes96_relevel$party, 
+                                       ordered = FALSE), "Independent")
+
+multinom(party ~ income, data = rnes96_relevel) %>% 
+  tidy(exponentiate = TRUE)
+```
+
+
+
+
 - What about log odds from independent to republican?
 
 
@@ -211,6 +230,11 @@ mod2 <- glm(cbind(CNS, NoCNS) ~ Area + Work, data = cns, family = binomial)
 AIC(mod1)
 AIC(mod2)
 ```
+
+```{r}
+full_mod
+```
+
 
 ## Explore Residuals
 
