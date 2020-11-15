@@ -42,7 +42,7 @@ resource "aws_security_group" "bastion" {
 data "template_file" "bastion_config" {
   template = file("./bastion_config.sh")
   vars = {
-    kaggle_credentials = file("~/Downloads/kaggle.json")
+    kaggle_credentials = jsonencode(file("~/Downloads/kaggle.json"))
   }
 }
 
