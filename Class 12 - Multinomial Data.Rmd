@@ -354,7 +354,7 @@ $$
 ## Visualization
 
 ```{r}
-letters_df <- data.frame(y = letter_samp)
+letters_df <- data.frame(y = as.factor(letter_samp))
 podds <- polr(y ~ 1, letters_df)
 
 df_lab <- tibble(
