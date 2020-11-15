@@ -39,17 +39,19 @@ resource "aws_security_group" "bastion" {
   }
 }
 
+data "template_file" "bastion_config" {
+  template = file("./bastion_config.sh")
+  vars = {
+    kaggle_credentials = file("~/Downloads/kaggle.json")
+  }
+}
+
 resource "aws_instance" "bastion" {
   ami                    = "ami-0d5d1a3aa3516231f"
   instance_type          = "t2.large"
   vpc_security_group_ids = [aws_security_group.bastion.id]
   key_name               = "${var.keypair_name}"
-  user_data              = file("./bastion_config.sh")
-
-  provisioner "file" {
-    source      = "~/.kaggle/kaggle.json"
-    destination = "/home/ec2-user/kaggle.json"
-  }
+  user_data              = data.template_file.bastion_config.rendered
 
   tags = {
     Name = "stat-706-bastion"
