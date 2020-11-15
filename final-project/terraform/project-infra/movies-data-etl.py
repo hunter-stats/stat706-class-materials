@@ -74,7 +74,7 @@ def _initialize_database(dbname: str, tablename: str):
 def load_csv(
     conn: psycopg2.connection,
     csv_file: str,
-    target_table_name: str,
+    tablename: str,
     chunksize: int = 1000,
 ):
     # create database and table,
@@ -116,7 +116,7 @@ def load_csv(
                 buffer, tablename, columns=list(df.columns), sep="\t", null="NULL"
             )
         except Exception as e:
-            logging.warn(str(e))
+            logging.error(str(e))
             connection.rollback()
             db_cursor.close()
             connection.close()
@@ -125,17 +125,10 @@ def load_csv(
         rowswritten += len(df)
         pct_written = 100 * (rowswritten / totalrows)
         logging.info(
-            f"send_to_database: {rowswritten} / {totalrows} "
+            f"{tablename} {rowswritten} / {totalrows} "
             f"({pct_written:.2f}%) written"
         )
-    # TODO: any necessary preparations on the data after loading, and before
-    # running the queries to come.
-
-    # it seems some data labeled country = NO
-    # has accidentally been labelled 'NONE'
-    update_sql = f"UPDATE {tablename} SET country = 'NO' WHERE country IS NULL"
-    db_cursor.execute(update_sql)
-
+        
     # commit the transaction
     # and close
     connection.commit()
