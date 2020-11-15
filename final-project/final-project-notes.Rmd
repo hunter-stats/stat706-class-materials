@@ -11,8 +11,17 @@ output:
 knitr::opts_chunk$set(echo = FALSE)
 library(ggplot2)
 ```
+# Introduction
+In recent years we've seen the film industry become highly polarized. Acclaimed director G. Inarritu once described the issue as analogous to global inequality ergo "the 99% and the 1%", just like the global economy; 1% of the films have 99% of the budget. The highest grossing films are consistently remakes of one kind or another -- marvel films, star wars, etc. On the other hand, we've seen a surge of relatively small-budget independent films that receive high critical praise -- Moonlight, Birdman, etc.
 
+Films must, at least on average, make a profit for the studio producing them. The goal of this paper is to investigate predictors of profitability, defined as revenue - budget (note, we assume films use all of their budget -- no more, no less). In particular, we consider the following variables.
 
+- release_date
+- budget
+- genre
+- ratings
+
+The dataset used here is Kaggle's "The Movies Dataset", located here https://www.kaggle.com/rounakbanik/the-movies-dataset. The dataset is an aggregate of data from GroupLens and TMDB.
 
 ```{r}
 
