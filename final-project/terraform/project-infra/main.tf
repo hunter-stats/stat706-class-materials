@@ -51,7 +51,7 @@ data "template_file" "bastion_config" {
     DB_USER            = var.db_username
     DB_PASS            = var.db_password
     DB_PORT            = var.db_port
-    DB_HOST            = aws_db_instance.address
+    DB_HOST            = aws_db_instance.database.address
   }
 }
 
