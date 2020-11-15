@@ -1,19 +1,19 @@
 #!/bin/bash
 
 # install system deps
-sudo yum install -y postgresql git python3 python3-wheel python-pip gcc
+sudo yum install -y postgresql git python3 python3-wheel python3-pip gcc
 
 # install pip deps
-pip install kaggle
-pip install pandas
-pip install psycopg2-binary
+sudo pip3 install kaggle pandas psycopg2-binary
 
 # write kaggle creds
 mkdir /home/ec2-user/.kaggle
 touch /home/ec2-user/.kaggle/kaggle.json
 echo ${kaggle_credentials} > /home/ec2-user/.kaggle/kaggle.json
+export KAGGLE_CONFIG_DIR='/home/ec2-user/.kaggle'
 
 # download data
+cd /home/ec2-user
 kaggle datasets download -d rounakbanik/the-movies-dataset
 unzip the-movies-dataset.zip
 
