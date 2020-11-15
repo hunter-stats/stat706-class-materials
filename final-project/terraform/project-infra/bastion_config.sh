@@ -19,3 +19,9 @@ unzip the-movies-dataset.zip
 
 # clone the repo
 git clone https://github.com/Nickhil-Sethi/stat706-class-materials.git
+
+# export database variables
+export DB_USER=${DB_USER}
+export DB_PASS=${DB_PASS}
+export DB_HOST=${DB_HOST}
+export DB_PORT=${DB_PORT}

@@ -20,6 +20,11 @@ variable "db_password" {
   type        = string
 }
 
+variable "db_port" {
+  description = "database port"
+  type        = number
+  default     = 5432
+}
 # bastion
 resource "aws_security_group" "bastion" {
   name = "terraform-example-instance"
@@ -43,6 +48,10 @@ data "template_file" "bastion_config" {
   template = file("./bastion_config.sh")
   vars = {
     kaggle_credentials = jsonencode(file("~/Downloads/kaggle.json"))
+    DB_USER            = var.db_username
+    DB_PASS            = var.db_password
+    DB_PORT            = var.db_port
+    DB_HOST            = aws_db_instance.address
   }
 }
 
@@ -64,7 +73,7 @@ resource "aws_security_group" "database" {
 
   ingress {
     from_port       = 0
-    to_port         = 5432
+    to_port         = var.db_port
     protocol        = "tcp"
     security_groups = [aws_security_group.bastion.id]
   }
