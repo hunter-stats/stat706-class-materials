@@ -112,7 +112,7 @@ def stream_csv_to_table(
         except Exception as e:
             logging.error(str(e))
             connection.rollback()
-            break
+            raise(e)
 
         rows_written += len(df)
         pct_written = 100 * (rows_written / total_rows)
