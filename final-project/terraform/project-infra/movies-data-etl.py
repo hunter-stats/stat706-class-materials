@@ -1,4 +1,6 @@
 import argparse
+from contextlib import contextmanager
+import logging
 import pandas as pd
 import psycopg2
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
@@ -7,19 +9,19 @@ from typing import List, Tuple
 
 logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 
-_conn = None
+CONNECTION_POOL = None
 
 
-def get_connection(
-    user: str, host: str, password: str, port: int, dbname: str = None
-) -> psycopg2.connection:
-    global _conn
-    if _conn is not None:
-        return _conn
-    _conn = psycopg2.connect(
-        host=host, port=port, dbname=dbname, user=user, password=password
-    )
-    return _conn
+@contextmanager
+def get_connection(isolation_level: str = None):
+    con = CONNECTION_POOL.getconn()
+    if isolation_level:
+        con.set_isolation_level(isolation_level)
+    try:
+        yield con
+    finally:
+        conn.reset()
+        CONNECTION_POOL.putconn(con)
 
 
 def get_csv_length(csvname):
@@ -28,23 +30,16 @@ def get_csv_length(csvname):
     return length
 
 
-def _create_database(dbname: str):
-    conn = get_connection()
-    conn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
-    cursor = conn.cursor()
+def create_database(conn: psycopg2.connection, dbname: str):
 
-    try:
-        logging.info(f"creating database {dbname}")
-        cursor.execute(f"CREATE DATABASE {dbname}")
-        conn.commit()
-        cursor.close()
-        conn.close()
-    except Exception as e:
-        logging.warn(f"send_to_database: {str(e)}")
+    logging.info(f"creating database {dbname}")
+    cursor.execute(f"CREATE DATABASE {dbname}")
+    conn.commit()
 
 
 def _create_table_sql(tablename: str, schema: List[Tuple]):
-    base_str = f"CREATE TABLE IF NOT EXISTS {tablename}(\n"
+    base_str = f"DROP TABLE IF EXISTS {tablename}\n"
+    base_str += f"CREATE TABLE IF NOT EXISTS {tablename}(\n"
     for index, column in enumerate(schema):
         (colname, coltype) = column
         base_str += f"{colname} {coltype}"
@@ -54,35 +49,27 @@ def _create_table_sql(tablename: str, schema: List[Tuple]):
     return base_str
 
 
-def _create_table(dbname: str, tablename: str):
-    conn = get_connection(dbname)
-    conn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
-    cursor = conn.cursor()
-
+def create_table(dbname: str, tablename: str):
     logging.info(f"creating table {tablename}")
     cursor.execute(_create_table_sql(tablename, COLUMN_DEFINITIONS))
-    logging.info(f"clearing table {tablename}")
-    cursor.execute(f"DELETE FROM {tablename}")
     return
 
 
-def _initialize_database(dbname: str, tablename: str):
-    _create_database(dbname)
-    _create_table(dbname, tablename)
+def load_csv(csv_file: str, tablename: str):
+    with get_connection(ISOLATION_LEVEL_AUTOCOMMIT) as conn:
+        cursor = conn.cursor()
+        create_table(conn, tablename)
+
+    with get_connection() as conn:
+        stream_csv_to_table(conn, csv_file, tablename)
 
 
-def load_csv(
+def stream_csv_to_table(
     conn: psycopg2.connection,
     csv_file: str,
     tablename: str,
     chunksize: int = 1000,
 ):
-    # create database and table,
-    # erasing table's current data (for idempotence)
-    _initialize_database(dbname, tablename)
-
-    # TODO: send data to the database
-    connection = get_connection(dbname)
     db_cursor = connection.cursor()
 
     # just for metrics reporting
@@ -91,7 +78,6 @@ def load_csv(
 
     df_chunked = pd.read_csv(
         datafilename,
-        sep="\t",
         chunksize=chunksize,
         keep_default_na=False,
         na_values=["NONE", "NULL"],
@@ -125,24 +111,35 @@ def load_csv(
         rowswritten += len(df)
         pct_written = 100 * (rowswritten / totalrows)
         logging.info(
-            f"{tablename} {rowswritten} / {totalrows} "
-            f"({pct_written:.2f}%) written"
+            f"{tablename} {rowswritten} / {totalrows} " f"({pct_written:.2f}%) written"
         )
-        
+
     # commit the transaction
     # and close
     connection.commit()
-    db_cursor.close()
-    connection.close()
     return
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
+
+    parser.add_argument("--db_user", required=True, type=str)
     parser.add_argument("--db_host", required=True, type=str)
-
     parser.add_argument("--db_pass", required=True, type=str)
-
     parser.add_argument("--db_port", required=False, type=int, default=5432)
-
     parser.add_argument("--db_name", required=False, type=str, default="movies_data")
+
+    args = parser.parse_args()
+
+    MIN_CONNECTIONS = 1
+    MAX_CONNECTIONS = 3
+
+    CONNECTION_POOL = psycopg2.SimpleConnectionPool(
+        MIN_CONNECTIONS,
+        MAX_CONNECTIONS,
+        host=args.db_host,
+        database=args.db_name,
+        user=args.db_user,
+        password=args.db_pass,
+        port=args.db_port,
+    )
