@@ -103,11 +103,11 @@ def stream_csv_to_table(
     for df in df_chunked:
         # json stringify columns that were parser
         for colname, coltype in df.dtypes.iteritems():
-            if get_pg_type(coltype) != 'JSONB':
+            if get_pg_type(coltype) != "JSONB":
                 continue
-                
+
             try:
-                df[colname].transform(json.loads)
+                df[colname] = df[colname].apply(json.loads)
             except Exception:
                 pass
 
@@ -122,7 +122,7 @@ def stream_csv_to_table(
         except Exception as e:
             logging.error(str(e))
             connection.rollback()
-            raise(e)
+            raise e
 
         rows_written += len(df)
         pct_written = 100 * (rows_written / total_rows)
