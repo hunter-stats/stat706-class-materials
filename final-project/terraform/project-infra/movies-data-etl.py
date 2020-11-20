@@ -2,6 +2,7 @@ import argparse
 from collections import OrderedDict
 from contextlib import contextmanager
 import io
+import json
 import logging
 import pandas as pd
 import psycopg2
@@ -100,6 +101,11 @@ def stream_csv_to_table(
     )
 
     for df in df_chunked:
+        # json stringify columns that were parser
+        for colname, coltype in df.dtypes.iteritems():
+            if get_pg_type(coltype) != 'JSONB':
+                continue
+            df[colname].transform(json.loads)
 
         buffer = io.StringIO()
         df.to_csv(buffer, header=False, index=False, sep="\t", na_rep="NULL")
