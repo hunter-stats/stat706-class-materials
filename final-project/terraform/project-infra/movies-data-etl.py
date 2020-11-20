@@ -105,7 +105,11 @@ def stream_csv_to_table(
         for colname, coltype in df.dtypes.iteritems():
             if get_pg_type(coltype) != 'JSONB':
                 continue
-            df[colname].transform(json.dumps)
+                
+            try:
+                df[colname].transform(json.loads)
+            except Exception:
+                pass
 
         buffer = io.StringIO()
         df.to_csv(buffer, header=False, index=False, sep="\t", na_rep="NULL")
