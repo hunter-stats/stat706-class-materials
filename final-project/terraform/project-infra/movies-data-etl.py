@@ -5,6 +5,7 @@ import io
 import logging
 import pandas as pd
 import psycopg2
+from psycopg2 import pool
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 import sys
 from typing import List, Tuple
@@ -48,14 +49,16 @@ def create_database(conn: "psycopg2.connection", dbname: str):
 
 
 def create_table_sql(tablename: str, schema: OrderedDict):
-    base_str = f"DROP TABLE IF EXISTS {tablename}\n"
+    base_str = f"DROP TABLE IF EXISTS {tablename};\n"
     base_str += f"CREATE TABLE IF NOT EXISTS {tablename}(\n"
-    for index, column in schema.items():
+    index = 0
+    for colname, coltype in schema.items():
         (colname, coltype) = column
         pg_type = get_pg_type(str(coltype))
         base_str += f"{colname} {pg_type}"
         if index < len(schema) - 1:
             base_str += ",\n"
+        index += 1
     base_str += ");"
     return base_str
 
@@ -70,7 +73,7 @@ def load_csv(csv_file: str):
     tablename = csv_file.replace(".csv", "")
 
     logging.info(f"Creating table {tablename}")
-    with get_connection(ISOLATION_LEVEL_AUTOCOMMIT) as conn:
+    with get_connection() as conn:
         create_table(conn, csv_file, tablename)
 
     logging.info(f"Loading CSV {csv_file} into {tablename}")
@@ -139,21 +142,21 @@ if __name__ == "__main__":
     MIN_CONNECTIONS = 1
     MAX_CONNECTIONS = 3
 
-    CONNECTION_POOL = psycopg2.SimpleConnectionPool(
+    CONNECTION_POOL = pool.SimpleConnectionPool(
         MIN_CONNECTIONS,
         MAX_CONNECTIONS,
         host=args.db_host,
-        database=args.db_name,
+        # database=args.db_name,
         user=args.db_user,
         password=args.db_pass,
         port=args.db_port,
     )
 
-    with get_connection(ISOLATION_LEVEL_AUTOCOMMIT) as con:
-        try:
-            create_database(con, args.dbname)
-        except Exception as e:
-            logging.warning(f"{e}")
+    # with get_connection(ISOLATION_LEVEL_AUTOCOMMIT) as con:
+    #     try:
+    #         create_database(con, args.dbname)
+    #     except Exception as e:
+    #         logging.warning(f"{e}")
 
     CSV_FILES = ["movies_metadata.csv", "ratings.csv", "links.csv"]
 
