@@ -1,5 +1,7 @@
 import argparse
+from collections import OrderedDict
 from contextlib import contextmanager
+import io
 import logging
 import pandas as pd
 import psycopg2
@@ -9,18 +11,29 @@ from typing import List, Tuple
 
 logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 
-CONNECTION_POOL = None
+
+def get_pg_type(pandas_dtype: str) -> str:
+    if pandas_dtype in ["object"]:
+        return "JSONB"
+    elif pandas_dtype in ["float64"]:
+        return "DECIMAL(10, 2)"
+    elif pandas_dtype in ["int64"]:
+        return "INTEGER"
+    elif pandas_dtype in ["bool"]:
+        return "BOOLEAN"
+    return "TEXT"
 
 
 @contextmanager
 def get_connection(isolation_level: str = None):
+    global CONNECTION_POOL
     con = CONNECTION_POOL.getconn()
     if isolation_level:
         con.set_isolation_level(isolation_level)
     try:
         yield con
     finally:
-        conn.reset()
+        con.reset()
         CONNECTION_POOL.putconn(con)
 
 
@@ -31,41 +44,42 @@ def get_csv_length(csvname):
 
 
 def create_database(conn: psycopg2.connection, dbname: str):
-
-    logging.info(f"creating database {dbname}")
-    cursor.execute(f"CREATE DATABASE {dbname}")
-    conn.commit()
+    conn.cursor().execute(f"CREATE DATABASE {dbname}")
 
 
-def _create_table_sql(tablename: str, schema: List[Tuple]):
+def create_table_sql(tablename: str, schema: OrderedDict):
     base_str = f"DROP TABLE IF EXISTS {tablename}\n"
     base_str += f"CREATE TABLE IF NOT EXISTS {tablename}(\n"
-    for index, column in enumerate(schema):
+    for index, column in schema.items():
         (colname, coltype) = column
-        base_str += f"{colname} {coltype}"
+        pg_type = get_pg_type(str(coltype))
+        base_str += f"{colname} {pg_type}"
         if index < len(schema) - 1:
             base_str += ",\n"
     base_str += ");"
     return base_str
 
 
-def create_table(dbname: str, tablename: str):
-    logging.info(f"creating table {tablename}")
-    cursor.execute(_create_table_sql(tablename, COLUMN_DEFINITIONS))
-    return
+def create_table(conn: psycopg2.connection, csv_file: str, tablename: str):
+    schema = OrderedDict(pd.read_csv(csv_file, nrows=20).dtypes)
+    create_sql = create_table_sql(tablename, schema)
+    conn.cursor().execute(create_sql)
 
 
-def load_csv(csv_file: str, tablename: str):
+def load_csv(csv_file: str):
+    tablename = csv_file.replace(".csv", "")
+
+    logging.info(f"Creating table {tablename}")
     with get_connection(ISOLATION_LEVEL_AUTOCOMMIT) as conn:
-        cursor = conn.cursor()
-        create_table(conn, tablename)
+        create_table(conn, csv_file, tablename)
 
+    logging.info(f"Loading CSV {csv_file} into {tablename}")
     with get_connection() as conn:
         stream_csv_to_table(conn, csv_file, tablename)
 
 
 def stream_csv_to_table(
-    conn: psycopg2.connection,
+    connection: psycopg2.connection,
     csv_file: str,
     tablename: str,
     chunksize: int = 1000,
@@ -73,30 +87,22 @@ def stream_csv_to_table(
     db_cursor = connection.cursor()
 
     # just for metrics reporting
-    rowswritten = 0
-    totalrows = get_csv_length(datafilename)
+    rows_written = 0
+    total_rows = get_csv_length(csv_file)
 
     df_chunked = pd.read_csv(
-        datafilename,
+        csv_file,
         chunksize=chunksize,
         keep_default_na=False,
         na_values=["NONE", "NULL"],
     )
 
-    logging.info(f"writing data from {datafilename} " f"to postgres table {tablename}")
-
-    int_cols = [
-        col for col, coltype in COLUMN_PYDATA_DEFINITIONS.items() if coltype is int
-    ]
     for df in df_chunked:
-
-        df[int_cols] = df[int_cols].fillna(-1)
-        df[int_cols] = df[int_cols].apply(pd.to_numeric, downcast="integer")
 
         buffer = io.StringIO()
         df.to_csv(buffer, header=False, index=False, sep="\t", na_rep="NULL")
-
         buffer.seek(0)
+
         try:
             db_cursor.copy_from(
                 buffer, tablename, columns=list(df.columns), sep="\t", null="NULL"
@@ -104,14 +110,13 @@ def stream_csv_to_table(
         except Exception as e:
             logging.error(str(e))
             connection.rollback()
-            db_cursor.close()
-            connection.close()
             break
 
-        rowswritten += len(df)
-        pct_written = 100 * (rowswritten / totalrows)
+        rows_written += len(df)
+        pct_written = 100 * (rows_written / total_rows)
+
         logging.info(
-            f"{tablename} {rowswritten} / {totalrows} " f"({pct_written:.2f}%) written"
+            f"{tablename} {rows_written} / {total_rows} ({pct_written:.2f}%) written"
         )
 
     # commit the transaction
@@ -143,3 +148,14 @@ if __name__ == "__main__":
         password=args.db_pass,
         port=args.db_port,
     )
+
+    with get_connection(ISOLATION_LEVEL_AUTOCOMMIT) as con:
+        try:
+            create_database(con, args.dbname)
+        except Exception as e:
+            logging.warning(f"{e}")
+
+    CSV_FILES = ["movies_metadata.csv", "ratings.csv", "links.csv"]
+
+    for csv_file in CSV_FILES:
+        load_csv(csv_file)
