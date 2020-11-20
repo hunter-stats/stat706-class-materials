@@ -43,7 +43,7 @@ def get_csv_length(csvname):
     return length
 
 
-def create_database(conn: psycopg2.connection, dbname: str):
+def create_database(conn: "psycopg2.connection", dbname: str):
     conn.cursor().execute(f"CREATE DATABASE {dbname}")
 
 
@@ -60,7 +60,7 @@ def create_table_sql(tablename: str, schema: OrderedDict):
     return base_str
 
 
-def create_table(conn: psycopg2.connection, csv_file: str, tablename: str):
+def create_table(conn: "psycopg2.connection", csv_file: str, tablename: str):
     schema = OrderedDict(pd.read_csv(csv_file, nrows=20).dtypes)
     create_sql = create_table_sql(tablename, schema)
     conn.cursor().execute(create_sql)
@@ -79,7 +79,7 @@ def load_csv(csv_file: str):
 
 
 def stream_csv_to_table(
-    connection: psycopg2.connection,
+    connection: "psycopg2.connection",
     csv_file: str,
     tablename: str,
     chunksize: int = 1000,
