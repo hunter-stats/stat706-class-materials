@@ -7,12 +7,15 @@ import logging
 import pandas as pd
 import psycopg2
 from psycopg2 import pool
-from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
+from psycopg2.extras import register_json
+from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT, register_adapter
 import sys
 from typing import List, Tuple
 
 logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 
+loads = lambda x: json.loads(x, parse_float=Decimal)
+psycopg2.extras.register_json(conn, loads=loads)
 
 def get_pg_type(pandas_dtype: str) -> str:
     if pandas_dtype in ["object"]:
@@ -101,16 +104,6 @@ def stream_csv_to_table(
     )
 
     for df in df_chunked:
-        # json stringify columns that were parser
-        for colname, coltype in df.dtypes.iteritems():
-            if get_pg_type(coltype) != "JSONB":
-                continue
-
-            try:
-                df[colname] = df[colname].apply(json.loads)
-            except Exception:
-                pass
-
         buffer = io.StringIO()
         df.to_csv(buffer, header=False, index=False, sep="\t", na_rep="NULL")
         buffer.seek(0)
