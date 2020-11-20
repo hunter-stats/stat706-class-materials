@@ -53,7 +53,6 @@ def create_table_sql(tablename: str, schema: OrderedDict):
     base_str += f"CREATE TABLE IF NOT EXISTS {tablename}(\n"
     index = 0
     for colname, coltype in schema.items():
-        (colname, coltype) = column
         pg_type = get_pg_type(str(coltype))
         base_str += f"{colname} {pg_type}"
         if index < len(schema) - 1:
