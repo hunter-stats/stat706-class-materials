@@ -7,15 +7,15 @@ import logging
 import pandas as pd
 import psycopg2
 from psycopg2 import pool
-from psycopg2.extras import register_json
+from psycopg2.extras import register_json, Json
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT, register_adapter
 import sys
 from typing import List, Tuple
 
 logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 
-loads = lambda x: json.loads(x, parse_float=Decimal)
-psycopg2.extras.register_json(conn, loads=loads)
+register_adapter(dict, Json)
+
 
 def get_pg_type(pandas_dtype: str) -> str:
     if pandas_dtype in ["object"]:
