@@ -28,13 +28,13 @@ class PostgresType(Enum):
 
 SCHEMAS = {
     "movies_metadata": {
-        "genres": PostgresType.TEXT,
-        "imdb_id": PostgresType.TEXT,
-        "revenue": PostgresType.BIGINT,
-        "budget": PostgresType.BIGINT,
-        "original_title": PostgresType.TEXT,
+        "genres": (PostgresType.TEXT, int)
+        "imdb_id": (PostgresType.TEXT, None)
+        "revenue": (PostgresType.BIGINT, int)
+        "budget": (PostgresType.BIGINT, int)
+        "original_title": (PostgresType.TEXT, None)
         # TODO(nickhil): this column is causing problems
-        "overview": PostgresType.TEXT,
+        # "overview": PostgresType.TEXT,
     }
 }
 
@@ -78,7 +78,7 @@ def create_table_sql(tablename: str, schema: OrderedDict):
     base_str = f"DROP TABLE IF EXISTS {tablename};\n"
     base_str += f"CREATE TABLE IF NOT EXISTS {tablename}(\n"
     index = 0
-    for colname, coltype in schema.items():
+    for colname, (coltype, _) in schema.items():
         base_str += f"{colname} {coltype.value}"
         if index < len(schema) - 1:
             base_str += ",\n"
@@ -119,6 +119,7 @@ def stream_csv_to_table(
     rows_written = 0
     total_rows = get_csv_length(csv_file)
     columns = SCHEMAS[tablename].keys()
+    schema = SCHEMAS[tablename]
     df_chunked = pd.read_csv(csv_file, chunksize=chunksize, usecols=columns)
 
     for df in df_chunked:
@@ -128,9 +129,11 @@ def stream_csv_to_table(
         # son.decoder.JSONDecodeError: Expecting property name enclosed in double quotes: line 1 column 2 (char 1)
         # str = str.replace("\'", "\"")
 
-        for col in df.columns:
-            if col == "overview":
-                df[col] = df[col].apply(json.loads)
+        for col in columns:
+            if schema[col][1] is None:
+                continue
+            df[col] = df[col].apply(schema[col][1])
+
         buffer = io.StringIO()
         df.to_csv(buffer, header=False, index=False, sep="|", na_rep="NULL")
         buffer.seek(0)
