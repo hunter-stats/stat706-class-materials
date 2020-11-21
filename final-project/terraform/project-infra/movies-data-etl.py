@@ -27,6 +27,16 @@ class PostgresType(Enum):
     SMALL_DEC = "DECIMAL(2,1)"
     BIGINT = "BIGINT"
     TIMESTAMP = "TIMESTAMP"
+    DATE = "DATE"
+
+
+def strip_prefix(x: str):
+    try:
+        return x.replace("tt0", "")
+    except Exception as e:
+        logging.warning(str(e))
+    finally:
+        return None
 
 
 def to_float(x):
@@ -34,6 +44,7 @@ def to_float(x):
         return float(x)
     except Exception as e:
         logging.warning(str(e))
+    finally:
         return None
 
 
@@ -55,9 +66,10 @@ SCHEMAS = {
         "imdb_id": (PostgresType.TEXT, None),
         "revenue": (PostgresType.DEC, to_float),
         "budget": (PostgresType.DEC, to_float),
-        "original_title": (PostgresType.TEXT, None)
+        "original_title": (PostgresType.TEXT, None),
         # TODO(nickhil): this column is causing problems
         # "overview": PostgresType.TEXT,
+        "release_date": (Postgres.DATE, None),
     },
     "ratings": {
         "rating": (PostgresType.SMALL_DEC, to_float),
