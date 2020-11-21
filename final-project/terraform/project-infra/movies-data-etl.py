@@ -27,9 +27,14 @@ class PostgresType(Enum):
 
 
 lambda x: x.to_numeric(errors="coerce")
+def correct_json(x):
+    print("before ", x)
+    s = x.replace("\'", '\"')
+    print("after ", s)
+    return s
 SCHEMAS = {
     "movies_metadata": {
-        "genres": (PostgresType.JSONB, lambda x: x.replace("\'", '\"')),
+        "genres": (PostgresType.JSONB, correct_json),
         "imdb_id": (PostgresType.TEXT, None),
         "revenue": (PostgresType.BIGINT, lambda x: pd.to_numeric(x, errors="coerce")),
         "budget": (PostgresType.BIGINT, lambda x: pd.to_numeric(x, errors="coerce")),
