@@ -28,10 +28,10 @@ class PostgresType(Enum):
 
 SCHEMAS = {
     "movies_metadata": {
-        "genres": (PostgresType.TEXT, int)
-        "imdb_id": (PostgresType.TEXT, None)
-        "revenue": (PostgresType.BIGINT, int)
-        "budget": (PostgresType.BIGINT, int)
+        "genres": (PostgresType.TEXT, int),
+        "imdb_id": (PostgresType.TEXT, None),
+        "revenue": (PostgresType.BIGINT, int),
+        "budget": (PostgresType.BIGINT, int),
         "original_title": (PostgresType.TEXT, None)
         # TODO(nickhil): this column is causing problems
         # "overview": PostgresType.TEXT,
