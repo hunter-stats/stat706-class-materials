@@ -35,7 +35,7 @@ def to_date(x):
     try:
         return date_parser.parse(str(x))
     except Exception as e:
-        logging.warning(str(e))
+        logging.warning(f"to_date {e}")
     finally:
         return None
 
@@ -53,7 +53,7 @@ def to_float(x):
     try:
         return float(x)
     except Exception as e:
-        logging.warning(str(e))
+        logging.warning(f"to_float: {e}")
     finally:
         return None
 
@@ -64,7 +64,7 @@ def correct_json(bad_json: str):
         obj = json.loads(good_json)
         return obj
     except Exception as e:
-        logging.warning(str(e))
+        logging.warning(f"correct_json {e}")
         return None
 
 
@@ -73,7 +73,9 @@ SCHEMAS = {
         # TODO(nickhil): could just make this text
         # this is giving me trouble
         "genres": (PostgresType.TEXT, correct_json),
-        "imdb_id": (PostgresType.TEXT, strip_prefix),
+        # TODO(nickhil): why does strip prefix throw an
+        # error here
+        "imdb_id": (PostgresType.TEXT, None),
         "revenue": (PostgresType.DEC, to_float),
         "budget": (PostgresType.DEC, to_float),
         "original_title": (PostgresType.TEXT, None),
@@ -204,6 +206,17 @@ def stream_csv_to_table(
     return
 
 
+def run_migrations():
+    with open("movies_metadata_migrations.sql") as f:
+        migration_string = f.read()
+
+    conn = get_connection()
+    cur = conn.get_cursor()
+    cur.execute(migration_string)
+    cur.commit()
+    return
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
@@ -239,3 +252,5 @@ if __name__ == "__main__":
 
     for csv_file in CSV_FILES:
         load_csv(csv_file)
+
+    run_migrations()
