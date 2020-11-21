@@ -1,6 +1,7 @@
 import argparse
 from collections import OrderedDict
 from contextlib import contextmanager
+from enum import Enum
 import io
 import json
 import logging
@@ -16,12 +17,26 @@ logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 
 register_adapter(dict, Json)
 
+class PostgresType(Enum):
+    TEXT = "TEXT"
+    JSONB = "JSONB"
+    INT = "INTEGER"
+    DEC = "DECIMAL(10, 2)"
+
+SCHEMAS = {
+    'movies_metadata': {
+        'genres': PostgresType.TEXT,
+        'imdb_id': PostgresType.INT,
+        'revenue': PostgresType.DEC,
+        'budget': PostgresType.DEC
+    }
+}
 
 def get_pg_type(pandas_dtype: str) -> str:
     if pandas_dtype in ["object"]:
         return "TEXT"
     elif pandas_dtype in ["float64"]:
-        return "DECIMAL(10, 2)"
+        return "DECIMAL(15, 6)"
     elif pandas_dtype in ["int64"]:
         return "INTEGER"
     elif pandas_dtype in ["bool"]:
@@ -57,8 +72,7 @@ def create_table_sql(tablename: str, schema: OrderedDict):
     base_str += f"CREATE TABLE IF NOT EXISTS {tablename}(\n"
     index = 0
     for colname, coltype in schema.items():
-        pg_type = get_pg_type(str(coltype))
-        base_str += f"{colname} {pg_type}"
+        base_str += f"{colname} {coltype}"
         if index < len(schema) - 1:
             base_str += ",\n"
         index += 1
@@ -67,7 +81,7 @@ def create_table_sql(tablename: str, schema: OrderedDict):
 
 
 def create_table(conn: "psycopg2.connection", csv_file: str, tablename: str):
-    schema = OrderedDict(pd.read_csv(csv_file, nrows=20).dtypes)
+    schema = SCHEMAS[tablename]
     create_sql = create_table_sql(tablename, schema)
     conn.cursor().execute(create_sql)
 
@@ -164,12 +178,6 @@ if __name__ == "__main__":
         password=args.db_pass,
         port=args.db_port,
     )
-
-    # with get_connection(ISOLATION_LEVEL_AUTOCOMMIT) as con:
-    #     try:
-    #         create_database(con, args.dbname)
-    #     except Exception as e:
-    #         logging.warning(f"{e}")
 
     CSV_FILES = [
         # genres, budget, revenue, imdbid
