@@ -1,6 +1,7 @@
 import argparse
 from collections import OrderedDict
 from contextlib import contextmanager
+import datetime as dt
 from enum import Enum
 import io
 import json
@@ -62,7 +63,7 @@ SCHEMAS = {
         "rating": (PostgresType.SMALL_DEC, to_float),
         "userId": (PostgresType.BIGINT, None),
         "movieId": (PostgresType.BIGINT, None),
-        "timestamp": (PostgresType.TIMESTAMP, None),
+        "timestamp": (PostgresType.TIMESTAMP, dt.datetime.utcfromtimestamp),
     },
 }
 
@@ -154,9 +155,8 @@ def stream_csv_to_table(
         for col in columns:
             if schema[col][1] is None:
                 continue
-            print(df[col])
             df[col] = df[col].apply(schema[col][1])
-            print(df[col])
+
         buffer = io.StringIO()
         df.to_csv(buffer, header=False, index=False, sep="|", na_rep="NULL")
         buffer.seek(0)
