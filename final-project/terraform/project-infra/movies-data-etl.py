@@ -17,20 +17,24 @@ logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 
 register_adapter(dict, Json)
 
+
 class PostgresType(Enum):
     TEXT = "TEXT"
     JSONB = "JSONB"
     INT = "INTEGER"
     DEC = "DECIMAL(10, 2)"
+    BIGINT = "BIGINT"
+
 
 SCHEMAS = {
-    'movies_metadata': {
-        'genres': PostgresType.TEXT,
-        'imdb_id': PostgresType.INT,
-        'revenue': PostgresType.DEC,
-        'budget': PostgresType.DEC
+    "movies_metadata": {
+        "genres": PostgresType.TEXT,
+        "imdb_id": PostgresType.TEXT,
+        "revenue": PostgresType.BIGINT,
+        "budget": PostgresType.BIGINT,
     }
 }
+
 
 def get_pg_type(pandas_dtype: str) -> str:
     if pandas_dtype in ["object"]:
@@ -182,11 +186,12 @@ if __name__ == "__main__":
 
     CSV_FILES = [
         # genres, budget, revenue, imdbid
-        "movies_metadata.csv", 
+        "movies_metadata.csv",
         # userid, movieid, ratings
-        "ratings.csv", 
-        # * 
-        "links.csv"]
+        "ratings.csv",
+        # *
+        "links.csv",
+    ]
 
     for csv_file in CSV_FILES:
         load_csv(csv_file)
