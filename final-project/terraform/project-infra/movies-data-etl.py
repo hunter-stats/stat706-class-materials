@@ -63,7 +63,7 @@ SCHEMAS = {
         # TODO(nickhil): could just make this text
         # this is giving me trouble
         "genres": (PostgresType.TEXT, correct_json),
-        "imdb_id": (PostgresType.TEXT, None),
+        "imdb_id": (PostgresType.TEXT, strip_prefix),
         "revenue": (PostgresType.DEC, to_float),
         "budget": (PostgresType.DEC, to_float),
         "original_title": (PostgresType.TEXT, None),
