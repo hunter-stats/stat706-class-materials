@@ -45,7 +45,7 @@ SCHEMAS = {
     "movies_metadata": {
         # TODO(nickhil): could just make this text
         # this is giving me trouble
-        "genres": (PostgresType.JSONB, correct_json),
+        "genres": (PostgresType.TEXT, correct_json),
         "imdb_id": (PostgresType.TEXT, None),
         "revenue": (PostgresType.BIGINT, to_int),
         "budget": (PostgresType.BIGINT, to_int),
