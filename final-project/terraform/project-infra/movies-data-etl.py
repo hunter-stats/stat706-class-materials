@@ -78,10 +78,12 @@ def load_csv(csv_file: str):
     logging.info(f"Creating table {tablename}")
     with get_connection() as conn:
         create_table(conn, csv_file, tablename)
+        conn.commit()
 
     logging.info(f"Loading CSV {csv_file} into {tablename}")
     with get_connection() as conn:
         stream_csv_to_table(conn, csv_file, tablename)
+        conn.commit()
 
 
 def stream_csv_to_table(
@@ -109,13 +111,17 @@ def stream_csv_to_table(
         # array is not valid json because it has single quotes
         # son.decoder.JSONDecodeError: Expecting property name enclosed in double quotes: line 1 column 2 (char 1)
         # str = str.replace("\'", "\"")
+        second_buffer = io.StringIO()
         buffer = io.StringIO()
-        df.to_csv(buffer, header=False, index=False, sep="\t", na_rep="NULL")
+        df.to_csv(buffer, header=False, index=False, sep="|", na_rep="NULL")
+        df.to_csv(second_buffer, header=False, index=False, sep="|", na_rep="NULL")
         buffer.seek(0)
+        second_buffer.seek(0)
+        print(second_buffer)
 
         try:
             db_cursor.copy_from(
-                buffer, tablename, columns=list(df.columns), sep="\t", null="NULL"
+                buffer, tablename, columns=list(df.columns), sep="|", null="NULL"
             )
         except Exception as e:
             logging.error(str(e))
