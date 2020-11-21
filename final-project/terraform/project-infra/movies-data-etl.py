@@ -33,6 +33,7 @@ SCHEMAS = {
         "revenue": PostgresType.BIGINT,
         "budget": PostgresType.BIGINT,
         "original_title": PostgresType.TEXT,
+        # TODO(nickhil): this column is causing problems
         "overview": PostgresType.TEXT,
     }
 }
@@ -126,6 +127,10 @@ def stream_csv_to_table(
         # array is not valid json because it has single quotes
         # son.decoder.JSONDecodeError: Expecting property name enclosed in double quotes: line 1 column 2 (char 1)
         # str = str.replace("\'", "\"")
+
+        for col in df.columns:
+            if col == "overview":
+                df[col] = df[col].apply(json.loads)
         buffer = io.StringIO()
         df.to_csv(buffer, header=False, index=False, sep="|", na_rep="NULL")
         buffer.seek(0)
