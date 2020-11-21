@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # install system deps
-sudo yum install -y postgresql git python3 python3-wheel python3-pip gcc
+sudo yum install -y postgresql git python3 python3-wheel python3-pip gcc emacs
 
 # install pip deps
 sudo pip3 install kaggle pandas psycopg2-binary
@@ -19,6 +19,8 @@ unzip the-movies-dataset.zip
 
 # clone the repo
 git clone https://github.com/Nickhil-Sethi/stat706-class-materials.git
+sudo chmod -R 777 stat706-class-materials
+cd stat706-class-materials; git checkout .
 
 # export database variables
 echo "DB_USER=${DB_USER}" >> /etc/environment

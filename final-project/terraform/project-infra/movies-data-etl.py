@@ -26,22 +26,24 @@ class PostgresType(Enum):
     BIGINT = "BIGINT"
 
 
-lambda x: x.to_numeric(errors="coerce")
-def correct_json(x):
+to_int = lambda x: x.to_numeric(errors="coerce")
+
+def correct_json(bad_json: str):
     try:
-        print("before ", x)
-        s = x.replace("\'", '\"')
-        print("after ", s)
-        return json.loads(s)
+        good_json = bad_json.replace("\'", '\"')
+        obj = json.loads(s)
+        return obj
     except Exception:
         return None
-        
+
 SCHEMAS = {
     "movies_metadata": {
+        # TODO(nickhil): could just make this text
+        # this is giving me trouble
         "genres": (PostgresType.JSONB, correct_json),
         "imdb_id": (PostgresType.TEXT, None),
-        "revenue": (PostgresType.BIGINT, lambda x: pd.to_numeric(x, errors="coerce")),
-        "budget": (PostgresType.BIGINT, lambda x: pd.to_numeric(x, errors="coerce")),
+        "revenue": (PostgresType.BIGINT, to_int),
+        "budget": (PostgresType.BIGINT, to_int),
         "original_title": (PostgresType.TEXT, None)
         # TODO(nickhil): this column is causing problems
         # "overview": PostgresType.TEXT,
