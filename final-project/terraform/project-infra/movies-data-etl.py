@@ -72,7 +72,7 @@ def create_table_sql(tablename: str, schema: OrderedDict):
     base_str += f"CREATE TABLE IF NOT EXISTS {tablename}(\n"
     index = 0
     for colname, coltype in schema.items():
-        base_str += f"{colname} {coltype}"
+        base_str += f"{colname} {coltype.value}"
         if index < len(schema) - 1:
             base_str += ",\n"
         index += 1
@@ -111,10 +111,11 @@ def stream_csv_to_table(
     # just for metrics reporting
     rows_written = 0
     total_rows = get_csv_length(csv_file)
-
+    columns = SCHEMAS[tablename].keys()
     df_chunked = pd.read_csv(
         csv_file,
         chunksize=chunksize,
+        usecols=columns,
         keep_default_na=False,
         na_values=["NONE", "NULL"],
     )
