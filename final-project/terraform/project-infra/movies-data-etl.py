@@ -21,13 +21,13 @@ class PostgresType(Enum):
     TEXT = "TEXT"
     JSONB = "JSONB"
     INT = "INTEGER"
-    DEC = "DECIMAL(10, 2)"
+    DEC = "DECIMAL(15, 2)"
     BIGINT = "BIGINT"
 
 
-def to_int(x):
+def to_float(x):
     try:
-        return int(x)
+        return float(x)
     except Exception as e:
         logging.warning(str(e))
         return None
@@ -47,8 +47,8 @@ SCHEMAS = {
         # this is giving me trouble
         "genres": (PostgresType.TEXT, correct_json),
         "imdb_id": (PostgresType.TEXT, None),
-        "revenue": (PostgresType.BIGINT, to_int),
-        "budget": (PostgresType.BIGINT, to_int),
+        "revenue": (PostgresType.DEC, to_int),
+        "budget": (PostgresType.DEC, to_int),
         "original_title": (PostgresType.TEXT, None)
         # TODO(nickhil): this column is causing problems
         # "overview": PostgresType.TEXT,
