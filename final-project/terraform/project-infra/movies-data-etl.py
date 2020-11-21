@@ -26,12 +26,13 @@ class PostgresType(Enum):
     BIGINT = "BIGINT"
 
 
+lambda x: x.to_numeric(errors="coerce")
 SCHEMAS = {
     "movies_metadata": {
-        "genres": (PostgresType.TEXT, lambda x: x.replace("\'", "\"")),
+        "genres": (PostgresType.TEXT, lambda x: x.replace("'", '"')),
         "imdb_id": (PostgresType.TEXT, None),
-        "revenue": (PostgresType.BIGINT, int),
-        "budget": (PostgresType.BIGINT, int),
+        "revenue": (PostgresType.BIGINT, lambda x: x.to_numeric(errors="coerce")),
+        "budget": (PostgresType.BIGINT, lambda x: x.to_numeric(errors="coerce")),
         "original_title": (PostgresType.TEXT, None)
         # TODO(nickhil): this column is causing problems
         # "overview": PostgresType.TEXT,
