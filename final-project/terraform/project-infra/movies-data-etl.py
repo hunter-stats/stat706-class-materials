@@ -29,7 +29,7 @@ class PostgresType(Enum):
 lambda x: x.to_numeric(errors="coerce")
 SCHEMAS = {
     "movies_metadata": {
-        "genres": (PostgresType.TEXT, lambda x: x.replace("'", '"')),
+        "genres": (PostgresType.JSONB, lambda x: x.replace("'", '"')),
         "imdb_id": (PostgresType.TEXT, None),
         "revenue": (PostgresType.BIGINT, lambda x: pd.to_numeric(x, errors="coerce")),
         "budget": (PostgresType.BIGINT, lambda x: pd.to_numeric(x, errors="coerce")),
