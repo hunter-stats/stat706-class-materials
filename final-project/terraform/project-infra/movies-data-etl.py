@@ -17,7 +17,6 @@ logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 
 register_adapter(dict, Json)
 
-
 class PostgresType(Enum):
     TEXT = "TEXT"
     JSONB = "JSONB"
@@ -32,10 +31,11 @@ def to_int(x):
     except Exception as e:
         logging.warning(str(e))
         return None
+
 def correct_json(bad_json: str):
     try:
         good_json = bad_json.replace("\'", '\"')
-        obj = json.loads(s)
+        obj = json.loads(good_json)
         return obj
     except Exception as e:
         logging.warning(str(e))
