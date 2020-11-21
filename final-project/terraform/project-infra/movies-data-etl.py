@@ -58,6 +58,15 @@ def to_float(x):
         return None
 
 
+def safe_int(x):
+    try:
+        return int(x)
+    except Exception as e:
+        logging.warning(f"to_int: {e}")
+    finally:
+        return None
+
+
 def correct_json(bad_json: str):
     try:
         good_json = bad_json.replace("'", '"')
@@ -76,8 +85,9 @@ SCHEMAS = {
         # TODO(nickhil): why does strip prefix throw an
         # error here
         "imdb_id": (PostgresType.TEXT, None),
-        "revenue": (PostgresType.DEC, to_float),
-        "budget": (PostgresType.DEC, to_float),
+        # TODO(nickhil): these aren't showing up
+        "revenue": (PostgresType.BIGINT, safe_int),
+        "budget": (PostgresType.BIGINT, safe_int),
         "original_title": (PostgresType.TEXT, None),
         # TODO(nickhil): this column is causing problems
         # "overview": PostgresType.TEXT,
