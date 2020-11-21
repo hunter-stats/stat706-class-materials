@@ -17,12 +17,15 @@ logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 
 register_adapter(dict, Json)
 
+
 class PostgresType(Enum):
     TEXT = "TEXT"
     JSONB = "JSONB"
     INT = "INTEGER"
     DEC = "DECIMAL(15, 2)"
+    SMALL_DEC = "DECIMAL(2,1)"
     BIGINT = "BIGINT"
+    TIMESTAMP = "TIMESTAMP"
 
 
 def to_float(x):
@@ -32,14 +35,16 @@ def to_float(x):
         logging.warning(str(e))
         return None
 
+
 def correct_json(bad_json: str):
     try:
-        good_json = bad_json.replace("\'", '\"')
+        good_json = bad_json.replace("'", '"')
         obj = json.loads(good_json)
         return obj
     except Exception as e:
         logging.warning(str(e))
         return None
+
 
 SCHEMAS = {
     "movies_metadata": {
@@ -52,7 +57,13 @@ SCHEMAS = {
         "original_title": (PostgresType.TEXT, None)
         # TODO(nickhil): this column is causing problems
         # "overview": PostgresType.TEXT,
-    }
+    },
+    "ratings": {
+        "rating": (PostgresType.SMALL_DEC, to_float),
+        "userId": (PostgresType.BIGINT, None),
+        "movieId": (PostgresType.BIGINT, None),
+        "timestamp": (PostgresType.TIMESTAMP, None),
+    },
 }
 
 
