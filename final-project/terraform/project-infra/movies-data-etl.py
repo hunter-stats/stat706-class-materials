@@ -28,10 +28,14 @@ class PostgresType(Enum):
 
 lambda x: x.to_numeric(errors="coerce")
 def correct_json(x):
-    print("before ", x)
-    s = x.replace("\'", '\"')
-    print("after ", s)
-    return s
+    try:
+        print("before ", x)
+        s = x.replace("\'", '\"')
+        print("after ", s)
+        return json.loads(s)
+    except Exception:
+        return None
+        
 SCHEMAS = {
     "movies_metadata": {
         "genres": (PostgresType.JSONB, correct_json),
