@@ -28,7 +28,7 @@ class PostgresType(Enum):
 
 SCHEMAS = {
     "movies_metadata": {
-        "genres": (PostgresType.TEXT, int),
+        "genres": (PostgresType.TEXT, lambda x: x.replace("\'", "\"")),
         "imdb_id": (PostgresType.TEXT, None),
         "revenue": (PostgresType.BIGINT, int),
         "budget": (PostgresType.BIGINT, int),
