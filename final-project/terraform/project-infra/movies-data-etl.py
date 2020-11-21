@@ -32,6 +32,8 @@ SCHEMAS = {
         "imdb_id": PostgresType.TEXT,
         "revenue": PostgresType.BIGINT,
         "budget": PostgresType.BIGINT,
+        "original_title": PostgresType.TEXT,
+        "overview": PostgresType.TEXT,
     }
 }
 
@@ -116,11 +118,7 @@ def stream_csv_to_table(
     rows_written = 0
     total_rows = get_csv_length(csv_file)
     columns = SCHEMAS[tablename].keys()
-    df_chunked = pd.read_csv(
-        csv_file,
-        chunksize=chunksize,
-        usecols=columns
-    )
+    df_chunked = pd.read_csv(csv_file, chunksize=chunksize, usecols=columns)
 
     for df in df_chunked:
         # TODO(nickhil): the issue appears to be the these 'belongs_to_collection'
