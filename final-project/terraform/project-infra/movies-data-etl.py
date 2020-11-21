@@ -26,14 +26,19 @@ class PostgresType(Enum):
     BIGINT = "BIGINT"
 
 
-to_int = lambda x: x.to_numeric(errors="coerce")
-
+def to_int(x):
+    try:
+        return int(x)
+    except Exception as e:
+        logging.warning(str(e))
+        return None
 def correct_json(bad_json: str):
     try:
         good_json = bad_json.replace("\'", '\"')
         obj = json.loads(s)
         return obj
-    except Exception:
+    except Exception as e:
+        logging.warning(str(e))
         return None
 
 SCHEMAS = {
@@ -135,17 +140,12 @@ def stream_csv_to_table(
     df_chunked = pd.read_csv(csv_file, chunksize=chunksize, usecols=columns)
 
     for df in df_chunked:
-        # TODO(nickhil): the issue appears to be the these 'belongs_to_collection'
-        # only need,
-        # array is not valid json because it has single quotes
-        # son.decoder.JSONDecodeError: Expecting property name enclosed in double quotes: line 1 column 2 (char 1)
-        # str = str.replace("\'", "\"")
-
         for col in columns:
             if schema[col][1] is None:
                 continue
+            print(df[col])
             df[col] = df[col].apply(schema[col][1])
-
+            print(df[col])
         buffer = io.StringIO()
         df.to_csv(buffer, header=False, index=False, sep="|", na_rep="NULL")
         buffer.seek(0)
