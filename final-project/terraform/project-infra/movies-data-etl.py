@@ -31,6 +31,15 @@ class PostgresType(Enum):
     DATE = "DATE"
 
 
+def to_date(x):
+    try:
+        return date_parser.parse(str(x))
+    except Exception as e:
+        logging.warning(str(e))
+    finally:
+        return None
+
+
 def strip_prefix(x: str):
     try:
         return x.replace("tt0", "")
@@ -70,7 +79,7 @@ SCHEMAS = {
         "original_title": (PostgresType.TEXT, None),
         # TODO(nickhil): this column is causing problems
         # "overview": PostgresType.TEXT,
-        "release_date": (PostgresType.DATE, date_parser.parse),
+        "release_date": (PostgresType.DATE, to_date),
     },
     "ratings": {
         "rating": (PostgresType.SMALL_DEC, to_float),
