@@ -2,6 +2,7 @@ import argparse
 from collections import OrderedDict
 from contextlib import contextmanager
 import datetime as dt
+from dateutil import parser as date_parser
 from enum import Enum
 import io
 import json
@@ -69,7 +70,7 @@ SCHEMAS = {
         "original_title": (PostgresType.TEXT, None),
         # TODO(nickhil): this column is causing problems
         # "overview": PostgresType.TEXT,
-        "release_date": (Postgres.DATE, None),
+        "release_date": (PostgresType.DATE, date_parser.parse),
     },
     "ratings": {
         "rating": (PostgresType.SMALL_DEC, to_float),
