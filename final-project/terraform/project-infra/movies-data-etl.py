@@ -19,7 +19,7 @@ register_adapter(dict, Json)
 
 def get_pg_type(pandas_dtype: str) -> str:
     if pandas_dtype in ["object"]:
-        return "JSONB"
+        return "TEXT"
     elif pandas_dtype in ["float64"]:
         return "DECIMAL(10, 2)"
     elif pandas_dtype in ["int64"]:
@@ -104,6 +104,11 @@ def stream_csv_to_table(
     )
 
     for df in df_chunked:
+        # TODO(nickhil): the issue appears to be the these 'belongs_to_collection'
+        # only need,
+        # array is not valid json because it has single quotes
+        # son.decoder.JSONDecodeError: Expecting property name enclosed in double quotes: line 1 column 2 (char 1)
+        # str = str.replace("\'", "\"")
         buffer = io.StringIO()
         df.to_csv(buffer, header=False, index=False, sep="\t", na_rep="NULL")
         buffer.seek(0)
@@ -160,7 +165,13 @@ if __name__ == "__main__":
     #     except Exception as e:
     #         logging.warning(f"{e}")
 
-    CSV_FILES = ["movies_metadata.csv", "ratings.csv", "links.csv"]
+    CSV_FILES = [
+        # genres, budget, revenue, imdbid
+        "movies_metadata.csv", 
+        # userid, movieid, ratings
+        "ratings.csv", 
+        # * 
+        "links.csv"]
 
     for csv_file in CSV_FILES:
         load_csv(csv_file)
