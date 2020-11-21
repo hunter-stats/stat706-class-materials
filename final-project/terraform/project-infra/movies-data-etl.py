@@ -47,8 +47,8 @@ SCHEMAS = {
         # this is giving me trouble
         "genres": (PostgresType.TEXT, correct_json),
         "imdb_id": (PostgresType.TEXT, None),
-        "revenue": (PostgresType.DEC, to_int),
-        "budget": (PostgresType.DEC, to_int),
+        "revenue": (PostgresType.DEC, to_float),
+        "budget": (PostgresType.DEC, to_float),
         "original_title": (PostgresType.TEXT, None)
         # TODO(nickhil): this column is causing problems
         # "overview": PostgresType.TEXT,
