@@ -262,11 +262,13 @@ if __name__ == "__main__":
         "--db_port", required=False, default=os.environ.get("DB_PORT"), type=int
     )
 
-    parser.add_argument("--load_data", required=False, default=False, type=bool)
-
     parser.add_argument(
-        "--create-project-table", required=False, default=False, type=bool
+        "--command",
+        choices=["load-data", "create-project-data"],
+        required=True,
+        type=str,
     )
+
     args = parser.parse_args()
 
     MIN_CONNECTIONS = 1
@@ -289,8 +291,8 @@ if __name__ == "__main__":
         # *
         "links.csv",
     ]
-    if args.load_data:
+    if args.command == "load-data":
         for csv_file in CSV_FILES:
             load_csv(csv_file)
-    else:
+    elif args.command == "create-project-data":
         create_data_table()
