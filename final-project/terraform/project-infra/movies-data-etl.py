@@ -217,6 +217,21 @@ def create_data_table():
         cursor.execute("SELECT * FROM movie_genres;")
         genres = cursor.fetchall()
         logging.info(f"Found genres {genres}")
+
+    genre_names = [g[1] for g in genres]
+    genre_cols = (",\n").join([f"{name} BOOLEAN DEFAULT FALSE" for name in genre_names])
+    create_sql = f"""CREATE TABLE project_data (
+        imdb_id INTEGER,
+        movie_id INTEGER,
+        average_rating DEC(2,1),
+        name TEXT,
+        {genre_cols}
+    );"""
+
+    with get_connection() as conn:
+        cursor = conn.cursor()
+        logging.info(f"Running: {create_sql}")
+        cursor.execute(create_sql)
     return
 
 
