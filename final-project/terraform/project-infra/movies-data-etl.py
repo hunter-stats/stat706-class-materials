@@ -237,6 +237,7 @@ def create_data_table():
         cursor = conn.cursor()
         logging.info(f"Running: {create_sql}")
         cursor.execute(create_sql)
+        conn.commit()
     return
 
 
