@@ -1,15 +1,30 @@
 ALTER TABLE movies_metadata
-ADD COLUMN parsed_genres JSONB;
+ADD COLUMN parsed_genres JSONB,
+ADD COLUMN cleaned_imdb_id TEXT;
 
-CREATE TABLE movie_ratings (
-    movieId BIGINT,
-    average_rating DEC(2,1)
+ALTER TABLE movies_metadata
+ADD PRIMARY KEY (imdb_id);
+
+ALTER TABLE movies_metadata
+ADD PRIMARY KEY cleaned_imdb_id;
+
+ALTER TABLE movies_metadata
+ADD COLUMN genres_copy TEXT;
+
+UPDATE movies_metadata
+SET genres_copy = genres;
+
+UPDATE movies_metadata SET genres_copy = replace(genres_copy, '''', '"');
+
+WITH jsonb_genres AS (
+    SELECT idmgenres_copy::JSONB as jbg
+    FROM movies_metadata
+)
+UPDATE movies_metadata 
+SET parsed_genres = (
+    SELECT jbg FROM
 );
-
-INSERT INTO movie_ratings (
-    movieId,
-    average_rating
-) 
-SELECT movieId, AVG(rating) 
-FROM ratings 
-GROUP BY movieId;
+/*
+    TODO : remove tt0 from imdb_id and insert into imdb_id 
+    TODO : replace single quotes with double quotes in genres column
+*/
