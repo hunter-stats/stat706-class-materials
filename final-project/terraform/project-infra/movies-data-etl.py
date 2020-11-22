@@ -7,13 +7,14 @@ from enum import Enum
 import io
 import json
 import logging
+import os
 import pandas as pd
 import psycopg2
 from psycopg2 import pool
 from psycopg2.extras import register_json, Json
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT, register_adapter
 import sys
-from typing import List, Tuple
+from typing import List, Tuple, Dict
 
 logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 
@@ -77,7 +78,7 @@ def correct_json(bad_json: str):
         return None
 
 
-SCHEMAS = {
+SCHEMAS: Dict[str, Dict[str, Tuple]] = {
     "movies_metadata": {
         # TODO(nickhil): could just make this text
         # this is giving me trouble
@@ -130,7 +131,7 @@ def create_database(conn: "psycopg2.connection", dbname: str):
     conn.cursor().execute(f"CREATE DATABASE {dbname}")
 
 
-def create_table_sql(tablename: str, schema: OrderedDict):
+def create_table_sql(tablename: str, schema: Dict[str, Tuple]):
     base_str = f"DROP TABLE IF EXISTS {tablename};\n"
     base_str += f"CREATE TABLE IF NOT EXISTS {tablename}(\n"
     index = 0
@@ -224,11 +225,18 @@ def run_migrations():
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("--db_user", required=True, type=str)
-    parser.add_argument("--db_host", required=True, type=str)
-    parser.add_argument("--db_pass", required=True, type=str)
-    parser.add_argument("--db_port", required=False, type=int, default=5432)
-    parser.add_argument("--db_name", required=False, type=str, default="movies_data")
+    parser.add_argument(
+        "--db_user", required=True, default=os.environ.get("DB_USER"), type=str
+    )
+    parser.add_argument(
+        "--db_host", required=True, default=os.environ.get("DB_HOST"), type=str
+    )
+    parser.add_argument(
+        "--db_pass", required=True, default=os.environ.get("DB_PASS"), type=str
+    )
+    parser.add_argument(
+        "--db_port", required=False, default=os.environ.get("DB_PORT"), type=int
+    )
 
     args = parser.parse_args()
 
@@ -239,7 +247,6 @@ if __name__ == "__main__":
         MIN_CONNECTIONS,
         MAX_CONNECTIONS,
         host=args.db_host,
-        # database=args.db_name,
         user=args.db_user,
         password=args.db_pass,
         port=args.db_port,
@@ -256,5 +263,3 @@ if __name__ == "__main__":
 
     for csv_file in CSV_FILES:
         load_csv(csv_file)
-
-    run_migrations()
