@@ -86,8 +86,8 @@ SCHEMAS = {
         # error here
         "imdb_id": (PostgresType.TEXT, None),
         # TODO(nickhil): these aren't showing up
-        "revenue": (PostgresType.BIGINT, safe_int),
-        "budget": (PostgresType.BIGINT, safe_int),
+        "revenue": (PostgresType.BIGINT, int),
+        "budget": (PostgresType.BIGINT, int),
         "original_title": (PostgresType.TEXT, None),
         # TODO(nickhil): this column is causing problems
         # "overview": PostgresType.TEXT,
@@ -100,18 +100,6 @@ SCHEMAS = {
         "timestamp": (PostgresType.TIMESTAMP, dt.datetime.utcfromtimestamp),
     },
 }
-
-
-def get_pg_type(pandas_dtype: str) -> str:
-    if pandas_dtype in ["object"]:
-        return "TEXT"
-    elif pandas_dtype in ["float64"]:
-        return "DECIMAL(15, 6)"
-    elif pandas_dtype in ["int64"]:
-        return "INTEGER"
-    elif pandas_dtype in ["bool"]:
-        return "BOOLEAN"
-    return "TEXT"
 
 
 @contextmanager
@@ -187,9 +175,13 @@ def stream_csv_to_table(
 
     for df in df_chunked:
         for col in columns:
-            if schema[col][1] is None:
+            transformation = schema[col][1]
+            if transformation is None:
                 continue
-            df[col] = df[col].apply(schema[col][1])
+            if transformation in [int]:
+                df[col].astype('int64')
+            else:
+                df[col] = df[col].apply(schema[col][1])
 
         buffer = io.StringIO()
         df.to_csv(buffer, header=False, index=False, sep="|", na_rep="NULL")
