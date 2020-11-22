@@ -220,7 +220,10 @@ def create_data_table():
 
     genre_names = [g[1] for g in genres]
     genre_cols = (",\n").join(
-        [f"\t{name.replace(' ', '_')} BOOLEAN DEFAULT FALSE" for name in genre_names]
+        [
+            f"\tgenre_{name.replace(' ', '_').lower()} BOOLEAN DEFAULT FALSE"
+            for name in genre_names
+        ]
     )
     create_sql = f"""CREATE TABLE project_data (
         imdb_id INTEGER,
