@@ -225,11 +225,16 @@ def create_data_table():
             for name in genre_names
         ]
     )
-    create_sql = f"""CREATE TABLE project_data (
+    create_sql = f"""
+    DROP TABLE project_data; 
+    CREATE TABLE project_data (
         imdb_id INTEGER,
         movie_id INTEGER,
         average_rating DEC(2,1),
-        name TEXT,
+        revenue DEC(12, 1),
+        budget DEC(32, 1),
+        original_title TEXT,
+        release_date DATE,
         {genre_cols}
     );"""
 
