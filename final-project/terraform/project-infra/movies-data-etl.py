@@ -219,7 +219,9 @@ def create_data_table():
         logging.info(f"Found genres {genres}")
 
     genre_names = [g[1] for g in genres]
-    genre_cols = (",\n").join([f"{name} BOOLEAN DEFAULT FALSE" for name in genre_names])
+    genre_cols = (",\n").join(
+        [f"{name.replace(' ', '_')} BOOLEAN DEFAULT FALSE" for name in genre_names]
+    )
     create_sql = f"""CREATE TABLE project_data (
         imdb_id INTEGER,
         movie_id INTEGER,
