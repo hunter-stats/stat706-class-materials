@@ -212,12 +212,12 @@ def stream_csv_to_table(
 
 
 def create_data_table():
-    conn = get_connection()
-    cursor = conn.cursor()
-
-    genres = cursor.execute("SELECT * FROM movie_genres;").fetchall()
-    logging.info(f'Found genres {genres}')
+    with get_connection() as conn:
+        cursor = conn.cursor()
+        genres = cursor.execute("SELECT * FROM movie_genres;").fetchall()
+        logging.info(f"Found genres {genres}")
     return
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -235,9 +235,7 @@ if __name__ == "__main__":
         "--db_port", required=False, default=os.environ.get("DB_PORT"), type=int
     )
 
-    parser.add_argument(
-        "--load_data", required=False, default=False, type=bool
-    )
+    parser.add_argument("--load_data", required=False, default=False, type=bool)
 
     parser.add_argument(
         "--create-project-table", required=False, default=False, type=bool
