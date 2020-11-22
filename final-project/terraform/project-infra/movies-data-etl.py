@@ -167,7 +167,7 @@ def stream_csv_to_table(
     connection: "psycopg2.connection",
     csv_file: str,
     tablename: str,
-    chunksize: int = 1000,
+    chunksize: int = 5000,
 ):
     db_cursor = connection.cursor()
 

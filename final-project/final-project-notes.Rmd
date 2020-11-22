@@ -1,59 +1,59 @@
 ---
-title: "Final Notes"
-subtitle: "August 27th, 2020"
+title: "Stat 706 Final Project: Investigating Predictors of Movie Profitability"
+subtitle: Nickhil Sethi
 output:
-  ioslides_presentation:
-    incremental: true
-    widescreen: true
+  pdf_document: default
+  word_document: default
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE)
 library(ggplot2)
 ```
+# TODO
+- Finish data transformation, sample data
+- Run plots of relevant variables against revenue. covariance matrix of genres.
+- Run regression using step function AIC information criterion. Identify meaningful values using  p-values.
+- Discuss the results. Run diagnostics, were the assumptions of LR correct?
+- Prediction intervals
+
 # Introduction
-In recent years we've seen the film industry become highly polarized. Acclaimed director G. Inarritu once described the issue as analogous to global inequality ergo "the 99% and the 1%", just like the global economy; 1% of the films have 99% of the budget. The highest grossing films are consistently remakes of one kind or another -- marvel films, star wars, etc. On the other hand, we've seen a surge of relatively small-budget independent films that receive high critical praise -- Moonlight, Birdman, etc.
+Profitability has become a contentious subject in the Film industry in recent years. The highest grossing films are typically either remakes of one kind or another (e.g. Marvel, Star Wars), or very small-budget independent films that receive high critical praise (e.g. Moonlight, Birdman, etc.). Acclaimed director G. Inarritu compared the issue to the polarization of the global economy, vis a vis the "99% and the 1%" (https://youtu.be/SQ7qKKQrSBY).
 
-Films must, at least on average, make a profit for the studio producing them. The goal of this paper is to investigate predictors of profitability, defined as revenue - budget (note, we assume films use all of their budget -- no more, no less). In particular, we consider the following variables.
+The goal of this paper is to investigate predictors of profitability, defined as `revenue - budget` (note, we assume films use all of their budget -- no more, no less). In particular, we consider the following variables:
 
-- release_date
-- budget
-- genre
-- ratings
+- Release date. This allows us capture some kind of time-trend in profitability
+- Budget. This captures the constraint that movies must be generally profitable. 
+- Genre. This captures popularity effects by genre.
+- Rating. This captures the "quality" of the film.
 
 The dataset used here is Kaggle's "The Movies Dataset", located here https://www.kaggle.com/rounakbanik/the-movies-dataset. The dataset is an aggregate of data from GroupLens and TMDB.
 
-```{r}
+# Methods
 
-get_substr <- function(s) {
-  l <- length(s)
-  x <- substr(s, 4, l)
-  x
+## Data
+The two relevant tables and columns from the Movies dataset are `movies_metadata.csv` and `ratings.csv`, which have the following schemas, respectively:
+
+```
+MOVIES_METADATA {
+  categories: [{ int: str }],
+  revenue: float,
+  budged: float,
+  movieId: int
 }
-ratings = read.csv("~/src/stat706-class-materials/movies-data/ratings_small.csv")
-ratings
 
-keywords = read.csv("~/src/stat706-class-materials/movies-data/keywords.csv")
-keywords
-
-
-metadata = read.csv("~/src/stat706-class-materials/movies-data/movies_metadata.csv")
-metadata$cleaned_imdb_id <- get_substr(metadata$imdb_id)
-metadata
-
-links <- read.csv("~/src/stat706-class-materials/movies-data/links_small.csv")
-ratings_linked <- merge(ratings, links, by = "movieId")
-ratings_linked 
-
-merged <- merge(m1, metadata, by.x = "tmdbId", by.y = "cleaned_imdb_id")
-merged
+RATINGS {
+  movieId: int,
+  userId: int,
+  rating: float,
+}
 ```
 
-```{r}
-ggplot(merged, aes(x=budget, y=revenue)) + geom_point() + geom_jitter()
-ggplot(merged, aes(x=budget, y=rating)) + geom_point() + geom_jitter()
-ggplot(merged, aes(x=revenue, y=rating)) + geom_point() + geom_jitter()
-ggplot(merged, aes(x=popularity, y=rating)) + geom_point() + geom_jitter()
-ggplot(merged, aes(x=release_date, y=rating)) + geom_point() + geom_jitter()
-ggplot(merged, aes(x=release_date, y=revenue)) + geom_point() + geom_jitter()
-```
+Significant data transformation was needed to turn the Movies data into a usable format. First, the genre column of movies_metadata.csv is JSON, encoded as a list of pairs e.g. `{[genreId: genreName] ...}`. I obtained the set of unique genres named in the dataset, and added one boolean column for every genre found. Second, the `ratings` table contains movie ratings at the level of `(movieId, userId)` pairs; a groupby operation was performed to extract the average rating for each movie. 
+Finally, a join was performed between the two tables using the join table `links.csv`.
+
+Given the computationally expensive nature of the above transformations and the need to be able to "start fresh" i.e. recover from potential data corruption, I conducted the data transformation and resampling on AWS servers. See terraform code in this repository which sets up a postgresql database and a single server on AWS to store and manipulate this data.
+
+`jsonb_array_elements` https://www.postgresql.org/docs/current/functions-json.html
+
+## Model
