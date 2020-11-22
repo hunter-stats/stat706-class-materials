@@ -95,7 +95,7 @@ SCHEMAS: Dict[str, Dict[str, Tuple]] = {
         "release_date": (PostgresType.DATE, to_date),
     },
     "ratings": {
-        "rating": (PostgresType.SMALL_DEC, to_float),
+        "rating": (PostgresType.SMALL_DEC, None),
         "userId": (PostgresType.BIGINT, None),
         "movieId": (PostgresType.BIGINT, None),
         "timestamp": (PostgresType.TIMESTAMP, dt.datetime.utcfromtimestamp),
