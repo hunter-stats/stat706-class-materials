@@ -1,0 +1,77 @@
+---
+title: "Homework 4 - Chapter 3 Question 2"
+author: "Nickhil Sethi"
+output:
+  pdf_document: default
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, width.cutoff=50)
+library(ggplot2)
+library(printr)
+library(gridExtra)
+library(faraway)
+```
+
+
+Load pima dataset:
+```{r}
+data("turtle")
+?turtle
+```
+
+## (a) Plot the proportion of males against the temperature. Comment on the nature of the relationship.
+
+```{r}
+turtle$frac_male <- turtle$male / (turtle$male + turtle$female)
+ggplot(data = turtle, mapping = aes(temp, frac_male)) + geom_point()
+```
+Broadly speaking the relationship appears to be a positive correlation, with the majority of the relationship being driven by three high leverage points at the lower end of the temperature axis. The relationship could even be non-linear.
+
+## (b) Fit a binomial response model with a linear term in temperature. Does this model fit the data?
+
+```{r}
+lmod <- glm(cbind(male, female) ~ temp, family=binomial, turtle)
+sumary(lmod)
+pchisq(deviance(lmod), df.residual(lmod), lower=FALSE)
+```
+
+Under the assumption that the model is correct, the deviance is distributed as $\chi^{2}(n-q-1)$; we see that the p-value of the deviance observed is very low, and thus the model is not a good fit.
+
+## (c) Is this data sparse?
+
+```{r}
+turtle$group_size <- turtle$male + turtle$female
+ggplot(data = turtle, aes(x=group_size), binwidth=1) + geom_histogram()
+```
+The data does not seem to be sparse -- the group sizes hover around 8 or higher.
+
+## (d) Check for outliers.
+
+```{r}
+halfnorm(residuals(lmod))
+```
+
+## (e) Compute the empirical logits and plot these against temperature. Does this indicate a lack of fit?
+
+```{r}
+turtle$empirical_logit <- log((turtle$male + .5) / (turtle$female + .5))
+ggplot(data = turtle, mapping=aes(x = empirical_logit, y = temp)) + geom_point()
+```
+
+## (f) Add a quadratic term in temperature. Is this additional term a significant predictor of the response. Does the quadratic model fit the data?
+
+```{r}
+turtle$temp_sq <- turtle$temp^2
+lmod <- glm(cbind(male, female) ~ temp + temp_sq, family=binomial, turtle)
+sumary(lmod)
+pchisq(deviance(lmod), df.residual(lmod), lower=FALSE)
+```
+The fit here is now slightly better than the others, but still not a great fit with a p-value of $.06$
+
+# Bonus Question (2 points)
+
+## (g) There are three replicates for each value of temperature. Assuming independent binomial variation, how much variation would be expected in the three proportions observed? Compare this to the observed variation in these proportions. Do they approximately agree or is there evidence of greater variation?
+
+## (h) If the three replicates are homogenous, they could be combined so that the dataset would have only five cases in total. Create this dataset and fit a model linear in temperature. Compare the fit seen for this model with that found in (b).
