@@ -86,8 +86,8 @@ SCHEMAS = {
         # error here
         "imdb_id": (PostgresType.TEXT, None),
         # TODO(nickhil): these aren't showing up
-        "revenue": (PostgresType.BIGINT, int),
-        "budget": (PostgresType.BIGINT, int),
+        "revenue": (PostgresType.TEXT, None),
+        "budget": (PostgresType.TEXT, None),
         "original_title": (PostgresType.TEXT, None),
         # TODO(nickhil): this column is causing problems
         # "overview": PostgresType.TEXT,
@@ -178,10 +178,7 @@ def stream_csv_to_table(
             transformation = schema[col][1]
             if transformation is None:
                 continue
-            if transformation in [int]:
-                df[col].astype('int64')
-            else:
-                df[col] = df[col].apply(schema[col][1])
+            df[col] = df[col].apply(schema[col][1])
 
         buffer = io.StringIO()
         df.to_csv(buffer, header=False, index=False, sep="|", na_rep="NULL")
