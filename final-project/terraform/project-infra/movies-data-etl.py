@@ -211,33 +211,37 @@ def stream_csv_to_table(
     return
 
 
-def run_migrations():
-    with open("movies_metadata_migrations.sql") as f:
-        migration_string = f.read()
-
+def create_data_table():
     conn = get_connection()
-    cur = conn.get_cursor()
-    cur.execute(migration_string)
-    cur.commit()
-    return
+    cursor = conn.cursor()
 
+    genres = cursor.execute("SELECT * FROM movie_genres;").fetchall()
+    logging.info(f'Found genres {genres}')
+    return
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
-        "--db_user", required=True, default=os.environ.get("DB_USER"), type=str
+        "--db_user", required=False, default=os.environ.get("DB_USER"), type=str
     )
     parser.add_argument(
-        "--db_host", required=True, default=os.environ.get("DB_HOST"), type=str
+        "--db_host", required=False, default=os.environ.get("DB_HOST"), type=str
     )
     parser.add_argument(
-        "--db_pass", required=True, default=os.environ.get("DB_PASS"), type=str
+        "--db_pass", required=False, default=os.environ.get("DB_PASS"), type=str
     )
     parser.add_argument(
         "--db_port", required=False, default=os.environ.get("DB_PORT"), type=int
     )
 
+    parser.add_argument(
+        "--load_data", required=False, default=False, type=bool
+    )
+
+    parser.add_argument(
+        "--create-project-table", required=False, default=False, type=bool
+    )
     args = parser.parse_args()
 
     MIN_CONNECTIONS = 1
@@ -260,6 +264,8 @@ if __name__ == "__main__":
         # *
         "links.csv",
     ]
-
-    for csv_file in CSV_FILES:
-        load_csv(csv_file)
+    if args.load_data:
+        for csv_file in CSV_FILES:
+            load_csv(csv_file)
+    else:
+        create_data_table()
