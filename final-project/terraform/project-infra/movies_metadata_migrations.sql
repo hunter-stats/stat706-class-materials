@@ -15,16 +15,27 @@ UPDATE movies_metadata
 SET genres_copy = genres;
 
 UPDATE movies_metadata SET genres_copy = replace(genres_copy, '''', '"');
+UPDATE movies_metadata SET parsed_genres = genres_copy::JSONB;
 
-WITH jsonb_genres AS (
-    SELECT idmgenres_copy::JSONB as jbg
-    FROM movies_metadata
-)
 UPDATE movies_metadata 
-SET parsed_genres = (
-    SELECT jbg FROM
+SET cleaned_imdb_id = replace(imdb_id, 'tt0', '');
+
+CREATE TABLE movie_genres (
+    genre_id INTEGER PRIMARY KEY,
+    genre_name TEXT
 );
-/*
-    TODO : remove tt0 from imdb_id and insert into imdb_id 
-    TODO : replace single quotes with double quotes in genres column
-*/
+
+WITH genres_json AS (
+    SELECT DISTINCT jsonb_array_elements(parsed_genres) as genre_object
+    FROM movies_metadata
+) 
+INSERT INTO movie_genres (
+    genre_id, 
+    genre_name
+) SELECT 
+    (genre_object->>'id')::INTEGER as genre_id,
+    genre_object->>'name' as genre_name
+FROM 
+    genres_json;
+
+DELETE FROM movies_metadata WHERE budget ILIKE '%.jpg';
