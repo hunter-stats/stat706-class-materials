@@ -214,7 +214,8 @@ def stream_csv_to_table(
 def create_data_table():
     with get_connection() as conn:
         cursor = conn.cursor()
-        genres = cursor.execute("SELECT * FROM movie_genres;").fetchall()
+        cursor.execute("SELECT * FROM movie_genres;")
+        genres = cursor.fetchall()
         logging.info(f"Found genres {genres}")
     return
 
