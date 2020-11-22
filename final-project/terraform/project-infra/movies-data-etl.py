@@ -99,6 +99,11 @@ SCHEMAS = {
         "movieId": (PostgresType.BIGINT, None),
         "timestamp": (PostgresType.TIMESTAMP, dt.datetime.utcfromtimestamp),
     },
+    "links": {
+        "movieId": (PostgresType.BIGINT, None),
+        "imdbId": (PostgresType.BIGINT, None),
+        "tmdbId": (PostgresType.BIGINT, None),
+    },
 }
 
 
