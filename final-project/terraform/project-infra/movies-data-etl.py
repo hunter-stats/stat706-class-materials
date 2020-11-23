@@ -246,6 +246,18 @@ def create_data_table():
     return
 
 
+def update_movie_genre(conn: "psycopg2.connection", movie: Tuple):
+    cursor = conn.cursor()
+    genres = json.loads(movie[1].replace("'", '"'))
+    genre_updates = (",").join([f"genre_{val}" for val in genres.values()])
+    update_sql = f"""
+        UPDATE project_data
+        SET {genre_updates};
+    """
+    logging.info(f"Running: {update_sql}")
+    cursor.execute(update_sql)
+
+
 def update_movie_genres():
     with get_connection as conn:
         cursor = conn.cursor()
@@ -279,7 +291,7 @@ if __name__ == "__main__":
 
     parser.add_argument(
         "--command",
-        choices=["load-data", "create-project-table", "update-project-genres"],
+        choices=["load-data", "create-project-table", "update-genres"],
         required=True,
         type=str,
     )
@@ -311,3 +323,5 @@ if __name__ == "__main__":
             load_csv(csv_file)
     elif args.command == "create-project-table":
         create_data_table()
+    elif args.command == "update-genres":
+        update_movie_genres()
