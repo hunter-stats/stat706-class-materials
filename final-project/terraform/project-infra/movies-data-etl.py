@@ -252,10 +252,11 @@ def update_movie_genre(conn: "psycopg2.connection", movie: Tuple):
     if not genres_list:
         return
     genres = [list(genre_obj.values()) for genre_obj in genres_list]
-    genre_updates = (",").join([f"genre_{g[0]}" for g in genres])
+    genre_updates = (",").join([f"genre_{g[0]} = TRUE\n" for g in genres])
     update_sql = f"""
         UPDATE project_data
-        SET {genre_updates};
+        SET 
+        {genre_updates};
     """
     logging.info(f"Running: {update_sql}")
     cursor.execute(update_sql)
