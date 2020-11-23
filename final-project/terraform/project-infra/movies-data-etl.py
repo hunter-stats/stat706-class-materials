@@ -259,7 +259,7 @@ def update_movie_genre(conn: "psycopg2.connection", movie: Tuple):
 
 
 def update_movie_genres():
-    with get_connection as conn:
+    with get_connection() as conn:
         cursor = conn.cursor()
         cursor.execute(
             f"""SELECT cleaned_imdb_id, genres
