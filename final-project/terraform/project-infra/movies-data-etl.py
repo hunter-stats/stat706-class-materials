@@ -259,7 +259,7 @@ def update_movie_genre(conn: "psycopg2.connection", movie: Tuple):
     if not genres_list:
         return
     genres = [genre_obj["name"].replace(" ", "_").lower() for genre_obj in genres_list]
-    genre_updates = ("\n,").join([f"genre_{g} = TRUE\n" for g in genres])
+    genre_updates = ("\n, ").join([f"genre_{g} = TRUE\n" for g in genres])
     update_sql = f"""
         UPDATE project_data
         SET {genre_updates}
@@ -284,6 +284,12 @@ def update_movie_genres():
         conn.commit()
 
 
+def download_project_data():
+    with get_connection() as conn:
+        df = pd.read_sql("SELECT * FROM project_data;", conn)
+        data = df.to_csv("project_data.csv")
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
@@ -302,7 +308,7 @@ if __name__ == "__main__":
 
     parser.add_argument(
         "--command",
-        choices=["load-data", "create-project-table", "update-genres"],
+        choices=["load-data", "create-project-table", "update-genres", "download-data"],
         required=True,
         type=str,
     )
@@ -336,3 +342,5 @@ if __name__ == "__main__":
         create_data_table()
     elif args.command == "update-genres":
         update_movie_genres()
+    elif args.command == "download-data":
+        download_project_data()
