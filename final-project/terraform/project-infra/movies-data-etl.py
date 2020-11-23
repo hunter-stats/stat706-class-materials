@@ -246,6 +246,21 @@ def create_data_table():
     return
 
 
+def update_movie_genres():
+    with get_connection as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            f"""SELECT cleaned_imdb_id, genres
+                FROM movies_metadata;"""
+        )
+        movie_genres = cursor.fetchall()
+
+    with get_connection() as conn:
+        for movie in movie_genres:
+            update_movie_genre(conn, movie)
+        conn.commit()
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
@@ -264,7 +279,7 @@ if __name__ == "__main__":
 
     parser.add_argument(
         "--command",
-        choices=["load-data", "create-project-data"],
+        choices=["load-data", "create-project-table", "update-project-genres"],
         required=True,
         type=str,
     )
@@ -294,5 +309,5 @@ if __name__ == "__main__":
     if args.command == "load-data":
         for csv_file in CSV_FILES:
             load_csv(csv_file)
-    elif args.command == "create-project-data":
+    elif args.command == "create-project-table":
         create_data_table()
