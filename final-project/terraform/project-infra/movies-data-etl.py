@@ -249,7 +249,7 @@ def create_data_table():
 def update_movie_genre(conn: "psycopg2.connection", movie: Tuple):
     cursor = conn.cursor()
     genres = json.loads(movie[1].replace("'", '"'))
-    genre_updates = (",").join([f"genre_{val}" for val in genres.values()])
+    genre_updates = (",").join([f"genre_{val.values[0]}" for val in genres])
     update_sql = f"""
         UPDATE project_data
         SET {genre_updates};
