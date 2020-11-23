@@ -18,8 +18,9 @@ UPDATE movies_metadata SET genres_copy = replace(genres_copy, '''', '"');
 UPDATE movies_metadata SET parsed_genres = genres_copy::JSONB;
 
 UPDATE movies_metadata 
-SET cleaned_imdb_id = replace(imdb_id, 'tt0', '');
+SET cleaned_imdb_id = regexp_replace(imdb_id, '^tt[0]?', '');
 
+DROP TABLE movie_genres;
 CREATE TABLE movie_genres (
     genre_id INTEGER PRIMARY KEY,
     genre_name TEXT
