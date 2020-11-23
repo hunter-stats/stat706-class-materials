@@ -251,7 +251,7 @@ def update_movie_genre(conn: "psycopg2.connection", movie: Tuple):
     logging.info(f"Found genres {genres_list} for movie {movie[2]}")
     if not genres_list:
         return
-    genres = [genre_obj['name'] for genre_obj in genres_list]
+    genres = [genre_obj['name'].replace(' ', '_').lower() for genre_obj in genres_list]
     genre_updates = (",").join([f"genre_{g} = TRUE\n" for g in genres])
     update_sql = f"""
         UPDATE project_data
