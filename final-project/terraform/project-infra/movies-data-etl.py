@@ -248,11 +248,12 @@ def create_data_table():
 
 def update_movie_genre(conn: "psycopg2.connection", movie: Tuple):
     cursor = conn.cursor()
-    genres = json.loads(movie[1].replace("'", '"'))
-    logging.info(f"Found genres {genres} for movie {movie[0]}")
-    if not genres:
+    genres_list = json.loads(movie[1].replace("'", '"'))
+    logging.info(f"Found genres {genres_list} for movie {movie[0]}")
+    if not genres_list:
         return
-    genre_updates = (",").join([f"genre_{val.values[0]}" for val in genres])
+    genres = [genre_obj.values() for genre_obj in genres_list]
+    genre_updates = (",").join([f"genre_{g[0]}" for g in genres])
     update_sql = f"""
         UPDATE project_data
         SET {genre_updates};
@@ -265,7 +266,7 @@ def update_movie_genres():
     with get_connection() as conn:
         cursor = conn.cursor()
         cursor.execute(
-            f"""SELECT cleaned_imdb_id, genres
+            f"""SELECT cleaned_imdb_id, genres, original_title
                 FROM movies_metadata;"""
         )
         movie_genres = cursor.fetchall()
