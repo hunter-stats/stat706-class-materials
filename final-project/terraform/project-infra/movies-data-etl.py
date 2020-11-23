@@ -245,18 +245,21 @@ def create_data_table():
         conn.commit()
     return
 
+
 def update_movie_genre(conn: "psycopg2.connection", movie: Tuple):
     cursor = conn.cursor()
     genres_list = json.loads(movie[1].replace("'", '"'))
-    logging.info(f"Found genres {genres_list} for movie {movie[2]}")
+    movie_id = movie[0]
+    movie_name = movies[2]
+    logging.info(f"Found genres {genres_list} for movie {movie_id} {movie_name}")
     if not genres_list:
         return
-    genres = [genre_obj['name'].replace(' ', '_').lower() for genre_obj in genres_list]
-    genre_updates = (",").join([f"genre_{g} = TRUE\n" for g in genres])
+    genres = [genre_obj["name"].replace(" ", "_").lower() for genre_obj in genres_list]
+    genre_updates = (",\n").join([f"genre_{g} = TRUE\n" for g in genres])
     update_sql = f"""
         UPDATE project_data
-        SET 
-        {genre_updates};
+        SET {genre_updates}
+        WHERE imdb_id = {movie_id}
     """
     logging.info(f"Running: {update_sql}")
     cursor.execute(update_sql)
