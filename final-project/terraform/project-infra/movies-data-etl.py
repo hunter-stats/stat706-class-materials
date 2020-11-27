@@ -56,12 +56,14 @@ def to_float(x):
         logging.warning(f"to_float: {e}")
         return None
 
+
 def safe_int(x):
     try:
         return int(x)
     except Exception as e:
         logging.warning(f"to_int: {e}")
         return None
+
 
 def correct_json(bad_json: str):
     try:
@@ -290,8 +292,7 @@ def download_project_data():
 def clean_dates(project_data_file: str):
     project_data = pd.read_csv(project_data_file)
     project_data["release_date"] = project_data["release_date"].apply(to_date)
-
-    project_data.to_csv("cleaned_project_data.csv")
+    project_data.to_csv("cleaned_project_data.csv", index=False)
 
 
 if __name__ == "__main__":
