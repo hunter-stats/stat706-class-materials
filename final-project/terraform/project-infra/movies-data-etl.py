@@ -34,7 +34,8 @@ class PostgresType(Enum):
 
 def to_date(x):
     try:
-        return date_parser.parse(str(x))
+        date_parser.parse(x)
+        return x
     except Exception as e:
         logging.warning(f"to_date {e}")
     finally:
