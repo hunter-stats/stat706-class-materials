@@ -38,7 +38,6 @@ def to_date(x):
         return parsed_date
     except Exception as e:
         logging.warning(f"to_date {e}")
-    finally:
         return None
 
 
@@ -47,7 +46,6 @@ def strip_prefix(x: str):
         return x.replace("tt0", "")
     except Exception as e:
         logging.warning(str(e))
-    finally:
         return None
 
 
@@ -56,18 +54,14 @@ def to_float(x):
         return float(x)
     except Exception as e:
         logging.warning(f"to_float: {e}")
-    finally:
         return None
-
 
 def safe_int(x):
     try:
         return int(x)
     except Exception as e:
         logging.warning(f"to_int: {e}")
-    finally:
         return None
-
 
 def correct_json(bad_json: str):
     try:
@@ -290,12 +284,13 @@ def update_movie_genres():
 def download_project_data():
     with get_connection() as conn:
         df = pd.read_sql("SELECT * FROM project_data;", conn)
-        df.to_csv("project_data.csv")
+        df.to_csv("project_data.csv", index=False)
 
 
 def clean_dates(project_data_file: str):
     project_data = pd.read_csv(project_data_file)
     project_data["release_date"] = project_data["release_date"].apply(to_date)
+
     project_data.to_csv("cleaned_project_data.csv")
 
 
