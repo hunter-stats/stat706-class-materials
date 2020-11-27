@@ -1,3 +1,4 @@
+DELETE FROM project_data;
 WITH movies AS (
     SELECT
         original_title,
