@@ -9,6 +9,7 @@ output:
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE)
 library(ggplot2)
+library(dplyr)
 
 # global variable, don't want to echo this
 GENRE_COLUMNS <- c("genre_vision_view_entertainment", "genre_thriller", "genre_pulser_productions", "genre_war", "genre_fantasy", "genre_documentary", "genre_sentai_filmworks", "genre_gohands", "genre_action", "genre_mardock_scramble_production_committee", "genre_family", "genre_crime", "genre_comedy", "genre_foreign", "genre_adventure", "genre_telescene_film_group_productions", "genre_mystery", "genre_science_fiction", "genre_horror", "genre_drama", "genre_carousel_productions", "genre_rogue_state", "genre_the_cartel", "genre_animation", "genre_romance", "genre_western", "genre_aniplex", "genre_history", "genre_brosta_tv", "genre_tv_movie", "genre_odyssey_media", "genre_music")
@@ -59,62 +60,80 @@ LINKS {
 }
 ```
 
-Some preparation was needed to turn the Movies data into a usable format. First, the genre column of movies_metadata.csv is JSON, encoded as a list of pairs e.g. `[{genreId: 1, genreName: Action}, {genreId: 2, genreName: Comedy}]`. I obtained the set of unique genres named in the dataset, and added one boolean column for every genre found. 
+Some preparation was needed to turn the Movies data into a usable format. The genre column of movies_metadata.csv is JSON, encoded as a list of pairs representing the set of genres the film is associated with e.g. `[{genreId: 1, genreName: Action}, {genreId: 2, genreName: Comedy}]`; this column was converted to a boolean array with one index for each genre .
 
-Second, the `ratings` table contains movie ratings at the level of `(movieId, userId)` pairs; a groupby operation was performed to extract the average rating for each movie. This table contained about 26 million rows, and the grouping operation was very expensive, taking roughly ~1 minute.
+The `ratings` table contains movie ratings at the level of `(movieId, userId)` pairs; a grouping operation was performed to extract the average rating for each movie. Finally, a join was performed between the two tables using the join table `LINKS`. 
 
-Finally, a join was performed between the two tables using the join table `links.csv`. 26 Million ratings and 5 Thousand movies. 
-
-Given the computationally expensive nature of the above transformations and the need to be able to "start fresh" i.e. recover from potential data corruption, I conducted the data transformation and resampling on AWS servers. See terraform code in this repository which sets up a postgresql database and a single server on AWS to store and manipulate this data.
-
-### Columns
-The final schema is as described below. Genres are represented as `boolean` columns with names `genre_[name]`; the prefix of "genre_" helps to avoid unfortunate name conflicts with keywords in postgres and python e.g. foreign (as in foreign key). `profit` was derived from this dataset by computing the quantity `revenue - budget` for each row in the dataframe.
+The final schema is as described below. The final schema contains `length(GENRE_COLUMNS)` genres. `genre_[name]`; the prefix of "genre_" helps to avoid unfortunate name conflicts with keywords in postgres and python e.g. foreign (as in foreign key). `profit` was derived from this dataset by computing the quantity `revenue - budget` for each row in the dataframe.
 
 ```
-PROJECT_DATA {
+movies {
   imdb_id: int,
   revenue: float,
   budget: float,
   profit: float,
+  release_date: date,
   genre_action: boolean,
-  ...
-  [many genre columns here]
+  genre_thriller: boolean,
   ...
   genre_music: boolean
 }
 ```
+### General Characteristics and Distribution
 
-The dataframe contains about `30615` rows. Computing high-dimensional regressions on this dataset was very computational expensive, so I sub-sampled 10% of the data at random.
+At the outset, the dataframe contains about `30615` rows; a few basic transformations are performed to cast data to the correct types, and compute the `profit` column. Finally, incomplete cases are dropped.
+
 ```{r}
-df <- read.csv(file = CSV_FILE_PATH, header = TRUE, sep = ",")
+movies <- read.csv(file = CSV_FILE_PATH, header = TRUE, sep = ",")
 
-# number of rows
-nrow(df)
+# compute profits for each film
+movies$profit <- movies$revenue - movies$budget
 
-project_data <- df[sample(nrow(df), nrow(df) / 10), ]
+# cast the release_date field to a date type
+movies$release_date <- as.Date(movies$release_date)
+
+# cast genre columns to boolean
 for (col in GENRE_COLUMNS) {
-  project_data[col] <- lapply(project_data[col], as.logical)
+  movies[col] <- lapply(movies[col], as.logical)
 }
 
-project_data$profit <- project_data$revenue - project_data$budget
-```
-```{r}
-ggplot(project_data, aes(x=profit)) + geom_histogram()
-ggplot(project_data, aes(x=budget, y=profit)) + geom_point()
-```
-Ratings appear to have some effect on profitability, but as we can clearly see.
-```{r}
-ggplot(project_data, aes(x=average_rating, y=profit)) + geom_point()
+# check if completeness is 
+movies$is_complete <- complete.cases(movies)
+ggplot(movies, aes(x=is_complete, y=profit)) + geom_jitter(width = .05, height=.05) + geom_point()
+
+# confirm that NA is not correlated with revenue
+movies <- movies[complete.cases(movies), ]
+
+# subsample 20% of the data
+movies <- movies[sample(nrow(movies), nrow(movies) / 2), ]
 ```
 
-Interestingly, release date appears to have no relationship with profit, so we leave this out of the model below.
+
 ```{r}
-ggplot(project_data, aes(x=release_date, y=profit)) + geom_point()
+ggplot(movies, aes(x=profit)) + geom_histogram()
+ggplot(movies, aes(x=budget, y=profit)) + geom_point()
+```
+Ratings appear to have some effect on profitability, but as we can clearly see the relationship is non-linear:
+```{r}
+ggplot(movies, aes(x=average_rating, y=profit)) + geom_point()
+```
+
+
+Release date has an interesting relationship with profit;
+```{r}
+ggplot(movies, aes(x=release_date, y=profit)) + geom_point()
 ```
 
 ## Model
 
 ```{r}
-lmod <- lm(profit ~ budget + average_rating + genre_vision_view_entertainment + genre_thriller + genre_pulser_productions + genre_war + genre_fantasy + genre_documentary + genre_sentai_filmworks + genre_gohands + genre_action + genre_mardock_scramble_production_committee + genre_family + genre_crime + genre_comedy + genre_foreign + genre_adventure + genre_telescene_film_group_productions + genre_mystery + genre_science_fiction + genre_horror + genre_drama + genre_carousel_productions + genre_rogue_state + genre_the_cartel + genre_animation + genre_romance + genre_western + genre_aniplex + genre_history + genre_brosta_tv + genre_tv_movie + genre_odyssey_media + genre_music, data = project_data)
-step(lmod)
+lmod <- lm(profit ~ budget + average_rating + release_date + genre_vision_view_entertainment + genre_thriller + genre_pulser_productions + genre_war + genre_fantasy + genre_documentary + genre_sentai_filmworks + genre_gohands + genre_action + genre_mardock_scramble_production_committee + genre_family + genre_crime + genre_comedy + genre_foreign + genre_adventure + genre_telescene_film_group_productions + genre_mystery + genre_science_fiction + genre_horror + genre_drama + genre_carousel_productions + genre_rogue_state + genre_the_cartel + genre_animation + genre_romance + genre_western + genre_aniplex + genre_history + genre_brosta_tv + genre_tv_movie + genre_odyssey_media + genre_music, data = movies)
+lmod_reduced <- step(lmod, echo=FALSE)
+summary(lmod_reduced)
 ```
+
+
+# Discussion
+
+## Challenges
+Not robust to re-sampling. Co-linearity
