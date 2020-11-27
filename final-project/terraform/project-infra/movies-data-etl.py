@@ -93,6 +93,8 @@ SCHEMAS: Dict[str, Dict[str, Tuple]] = {
         "original_title": (PostgresType.TEXT, None),
         # TODO(nickhil): this column is causing problems
         # "overview": PostgresType.TEXT,
+        # TODO(nickhil): figure out why this was fucking up
+        # when I type converted it, even back to a string
         "release_date": (PostgresType.TEXT, None),
     },
     "ratings": {
@@ -288,7 +290,13 @@ def update_movie_genres():
 def download_project_data():
     with get_connection() as conn:
         df = pd.read_sql("SELECT * FROM project_data;", conn)
-        data = df.to_csv("project_data.csv")
+        df.to_csv("project_data.csv")
+
+
+def clean_dates(project_data_file: str):
+    project_data = pd.read_csv(project_data_file)
+    project_data["release_date"] = project_data["release_date"].apply(to_date)
+    project_data.to_csv("cleaned_project_data.csv")
 
 
 if __name__ == "__main__":
