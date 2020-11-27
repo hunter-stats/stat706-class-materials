@@ -34,7 +34,7 @@ class PostgresType(Enum):
 
 def to_date(x):
     try:
-        parsed_date = date_parser.parse(x)
+        parsed_date = str(date_parser.parse(x).date())
         return parsed_date.date()
     except Exception as e:
         logging.warning(f"to_date {e}")
@@ -93,7 +93,7 @@ SCHEMAS: Dict[str, Dict[str, Tuple]] = {
         "original_title": (PostgresType.TEXT, None),
         # TODO(nickhil): this column is causing problems
         # "overview": PostgresType.TEXT,
-        "release_date": (PostgresType.DATE, to_date),
+        "release_date": (PostgresType.TEXT, None),
     },
     "ratings": {
         "rating": (PostgresType.SMALL_DEC, None),
@@ -235,7 +235,7 @@ def create_data_table():
         revenue DEC(12, 1),
         budget DEC(32, 1),
         original_title TEXT,
-        release_date DATE,
+        release_date TEXT,
         {genre_cols}
     );"""
 
