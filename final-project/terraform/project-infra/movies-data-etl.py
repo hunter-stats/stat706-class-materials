@@ -353,3 +353,5 @@ if __name__ == "__main__":
         update_movie_genres()
     elif args.command == "download-data":
         download_project_data()
+    elif args.command == "clean-dates":
+        clean_dates('./project_data.csv')
