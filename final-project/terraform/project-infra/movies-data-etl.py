@@ -317,7 +317,13 @@ if __name__ == "__main__":
 
     parser.add_argument(
         "--command",
-        choices=["load-data", "create-project-table", "update-genres", "download-data"],
+        choices=[
+            "load-data",
+            "create-project-table",
+            "update-genres",
+            "download-data",
+            "clean-dates",
+        ],
         required=True,
         type=str,
     )
@@ -354,4 +360,4 @@ if __name__ == "__main__":
     elif args.command == "download-data":
         download_project_data()
     elif args.command == "clean-dates":
-        clean_dates('./project_data.csv')
+        clean_dates("./project_data.csv")
