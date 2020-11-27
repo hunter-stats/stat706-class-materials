@@ -2,7 +2,7 @@ import argparse
 from collections import OrderedDict
 from contextlib import contextmanager
 import datetime as dt
-from dateutil import parser as date_parser
+from dateutil.parser import parse
 from enum import Enum
 import io
 import json
@@ -34,8 +34,8 @@ class PostgresType(Enum):
 
 def to_date(x):
     try:
-        parsed_date = str(date_parser.parse(x).date())
-        return parsed_date.date()
+        parsed_date = str(parse(x).date())
+        return parsed_date
     except Exception as e:
         logging.warning(f"to_date {e}")
     finally:
