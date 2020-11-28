@@ -24,21 +24,21 @@ CSV_FILE_PATH <-  "/Users/nickhilsethi/src/stat706-class-materials/final-project
 - Prediction intervals
 
 # Introduction
-Profitability has become a contentious subject in the Film industry in recent years. The highest grossing films are typically either remakes of one kind or another (e.g. Marvel, Star Wars), or very small-budget independent films that receive high critical praise (e.g. Moonlight, Birdman, etc.). Acclaimed director G. Inarritu compared the issue to the polarization of the global economy, vis a vis the "99% and the 1%" (https://youtu.be/SQ7qKKQrSBY).
+Profitability has become a contentious subject in the film industry in recent years. Acclaimed director G. Inarritu likened the state of affairs of the industry "the 99% and the 1%" of the global economy (https://youtu.be/SQ7qKKQrSBY), with the highest grossing films being either remakes of one kind or another (e.g. Marvel, Star Wars), or very small-budget independent films that receive high critical praise (e.g. Moonlight, Birdman, etc.).
 
-The goal of this paper is to investigate predictors of profitability, defined as `revenue - budget` (note, we assume films use all of their budget -- no more, no less). In particular, we consider the following variables:
+The goal of this paper is to empirically determine predictors of the profitability of a film using Kaggle's ["The Movies Dataset"](https://www.kaggle.com/rounakbanik/the-movies-dataset), an aggregate of data from GroupLens and TMDB, containing data on film revenue, budget, genre, and ratings. 
+
+We begin from a complete set of predictors (see below) and use an iterative procedure to minimize the Akaike-Information Criterion (i.e. R's `step` function) in order to discover the most relevant variables.
 
 - Release date. This allows us capture some kind of time-trend in profitability
 - Budget. This captures the constraint that movies must be generally profitable. 
 - Genre. This captures popularity effects by genre.
-- Rating. This captures the "quality" of the film.
-
-The dataset used here is Kaggle"s "The Movies Dataset", located here https://www.kaggle.com/rounakbanik/the-movies-dataset. The dataset is an aggregate of data from GroupLens and TMDB.
+- Rating. This captures the critical-reception of the film.
 
 # Methods
 
 ## Data
-The two relevant tables and columns from the Movies dataset are `movies_metadata.csv` and `ratings.csv`, which have the following schemas, respectively:
+The Movies dataset contains three tables relevant to our analysis -- `movies_metadata`, `ratings`, and a join table `links`. The three tables have the following schemas:
 
 ```
 MOVIES_METADATA {
@@ -59,12 +59,13 @@ LINKS {
   imdbId: int
 }
 ```
+### Data Transformation and Cleaning
 
-Some preparation was needed to turn the Movies data into a usable format. The genre column of movies_metadata.csv is JSON, encoded as a list of pairs representing the set of genres the film is associated with e.g. `[{genreId: 1, genreName: Action}, {genreId: 2, genreName: Comedy}]`; this column was converted to a boolean array with one index for each genre .
+Some preparation was needed to turn these three tables into a usable format. The genre column of `movies_metadata` is JSON, encoded as a list of pairs representing the set of genres the film is associated with e.g. `[{genreId: 1, genreName: Action}, {genreId: 2, genreName: Comedy}]`; this column was converted to a set of boolean columns e.g. `genre_action` with `True` representing that the film belongs to that genre.
 
-The `ratings` table contains movie ratings at the level of `(movieId, userId)` pairs; a grouping operation was performed to extract the average rating for each movie. Finally, a join was performed between the two tables using the join table `LINKS`. 
+The `ratings` table contains movie ratings at the level of `(movieId, userId)` pairs, i.e. at the level of an individual critic's review; a grouping operation was performed to compute the average rating for each movie. Finally, a join was performed between the two tables using the join table `links` to create a single `movies` table, which serves as the final dataset on which we run our regression.
 
-The final schema is as described below. The final schema contains `length(GENRE_COLUMNS)` genres. `genre_[name]`; the prefix of "genre_" helps to avoid unfortunate name conflicts with keywords in postgres and python e.g. foreign (as in foreign key). `profit` was derived from this dataset by computing the quantity `revenue - budget` for each row in the dataframe.
+The `movies` schema is described below. The `profit`column is a derived quantity defined as `revenue - budget`; note the assumption here that all films use exactly there budget. The table also contains 32 genre columns with naming pattern `genre_[name]`; the prefix of "genre_" helps to avoid unfortunate name conflicts with keywords in postgres and python e.g. foreign (as in foreign key).
 
 ```
 movies {
@@ -79,9 +80,9 @@ movies {
   genre_music: boolean
 }
 ```
-### General Characteristics and Distribution
 
-At the outset, the dataframe contains about `30615` rows; a few basic transformations are performed to cast data to the correct types, and compute the `profit` column. Finally, incomplete cases are dropped.
+Finally, rows with missing values are dropped. As can be seen from the chart below, the variable `is_complete` may be correlated with revenue, with incomplete rows typically having `0` profit, but this is not a major conceptual issue for the project for two reasons; first, the vast majority of the films in the dataset are roughly break even.
+
 
 ```{r}
 movies <- read.csv(file = CSV_FILE_PATH, header = TRUE, sep = ",")
@@ -101,18 +102,32 @@ for (col in GENRE_COLUMNS) {
 movies$is_complete <- complete.cases(movies)
 ggplot(movies, aes(x=is_complete, y=profit)) + geom_jitter(width = .05, height=.05) + geom_point()
 
+num_non_profitable <- nrow(movies[movies$profit < 0.1 && -0.1 < movies$profit,])
+num_non_profitable
+
+num_profitable <-  nrow(movies[movies$profit > 100,])
+num_profitable
+
+movies <- movies[movies$profit > 100,]
+
 # confirm that NA is not correlated with revenue
-movies <- movies[complete.cases(movies), ]
+movies <- movies[movies$is_complete == TRUE, ]
 
 # subsample 20% of the data
-movies <- movies[sample(nrow(movies), nrow(movies) / 2), ]
+# movies <- movies[sample(nrow(movies), nrow(movies) / 2), ]
 ```
 
+### General Characteristics and Distribution
+
+First, let's take a look at the distribution of profit. It seems profit is approximately a gaussian variable, heavily peaked at zero, with a fraction of films being either profit positive or profit negative:
+```{r}
+ggplot(movies, aes(x=profit)) + geom_histogram(bins=100)
+```
 
 ```{r}
-ggplot(movies, aes(x=profit)) + geom_histogram()
 ggplot(movies, aes(x=budget, y=profit)) + geom_point()
 ```
+
 Ratings appear to have some effect on profitability, but as we can clearly see the relationship is non-linear:
 ```{r}
 ggplot(movies, aes(x=average_rating, y=profit)) + geom_point()
@@ -136,4 +151,4 @@ summary(lmod_reduced)
 # Discussion
 
 ## Challenges
-Not robust to re-sampling. Co-linearity
+Not robust to re-sampling. Co-linearity between genres
