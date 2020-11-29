@@ -27,9 +27,7 @@ CSV_FILE_PATH <-  "/Users/nickhilsethi/src/stat706-class-materials/final-project
 - Prediction intervals
 
 # Introduction
-Profitability has become a contentious subject in the film industry in recent years. Acclaimed director G. Inarritu likened the state of affairs of the industry "the 99% and the 1%" of the global economy (https://youtu.be/SQ7qKKQrSBY), with the highest grossing films being either remakes of one kind or another (e.g. Marvel, Star Wars), or very small-budget independent films that receive high critical praise (e.g. Moonlight, Birdman, etc.). Given the concerns in the industry, it makes sense to mount an empirical investigation into what films are profitable and what films are not.
-
-The goal of this paper is to investigate of the profitability of a film using Kaggle's ["The Movies Dataset"](https://www.kaggle.com/rounakbanik/the-movies-dataset), an aggregate of data from GroupLens and TMDB containing data on film revenue, budget, genre, and ratings. 
+The goal of this paper is to determine factors which predict a film's profitability in Kaggle's ["The Movies Dataset"](https://www.kaggle.com/rounakbanik/the-movies-dataset), an aggregate of data from GroupLens and TMDB containing data on film revenue, budget, genre, and ratings. In particular, we hope to determine how critical reception and budge affect profitability.
 
 We begin from a complete set of predictors (see below) and use an iterative procedure to minimize the Akaike-Information Criterion (i.e. R's `step` function) in order to discover the most relevant variables. We then examine the reduced model for significant predictors, interpret the results, and construct prediction intervals for movies of varying characteristics.
 
@@ -111,8 +109,10 @@ movies <- movies[, features]
 
 movies$is_complete <- complete.cases(movies)
 
-p1 <- ggplot(movies, aes(x=is_complete, y=profit)) + geom_jitter(width = .05, height=.05) + geom_point()
-p2 <- ggplot(movies, aes(x=is_complete)) + geom_histogram(stat="count")
+p1 <- ggplot(
+  movies, aes(x=is_complete, y=profit)) + geom_jitter(width = .05, height=.05) + geom_point()
+p2 <- ggplot(
+  movies, aes(x=is_complete)) + geom_histogram(stat="count")
 grid.arrange(p1, p2, nrow=1)
 
 # now we drop the incomplete cases
@@ -145,9 +145,9 @@ Budget is positively correlated with profit, with the relationship being heteros
 
 ```{r}
 lmod <- lm(profit ~ ., data = movies)
-sumary(lmod)
-
 lmod_reduced <- step(lmod, trace=0)
+
+sumary(lmod)
 sumary(lmod_reduced)
 ```
 
