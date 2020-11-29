@@ -10,9 +10,12 @@ output:
 knitr::opts_chunk$set(echo = FALSE)
 library(ggplot2)
 library(dplyr)
+library(gridExtra)
+library(printr)
+library(faraway)
 
 # global variable, don't want to echo this
-GENRE_COLUMNS <- c("genre_vision_view_entertainment", "genre_thriller", "genre_pulser_productions", "genre_war", "genre_fantasy", "genre_documentary", "genre_sentai_filmworks", "genre_gohands", "genre_action", "genre_mardock_scramble_production_committee", "genre_family", "genre_crime", "genre_comedy", "genre_foreign", "genre_adventure", "genre_telescene_film_group_productions", "genre_mystery", "genre_science_fiction", "genre_horror", "genre_drama", "genre_carousel_productions", "genre_rogue_state", "genre_the_cartel", "genre_animation", "genre_romance", "genre_western", "genre_aniplex", "genre_history", "genre_brosta_tv", "genre_tv_movie", "genre_odyssey_media", "genre_music")
+GENRE_COLUMNS <- c( "genre_thriller", "genre_war", "genre_fantasy", "genre_documentary", "genre_gohands", "genre_action", "genre_family", "genre_crime", "genre_comedy", "genre_foreign", "genre_adventure", "genre_mystery", "genre_science_fiction", "genre_horror", "genre_drama", "genre_animation", "genre_romance", "genre_western", "genre_history", "genre_tv_movie", "genre_music")
 
 CSV_FILE_PATH <-  "/Users/nickhilsethi/src/stat706-class-materials/final-project/terraform/project-infra/project_data.csv"
 
@@ -44,7 +47,7 @@ The Movies dataset contains three tables relevant to our analysis -- `movies_met
 
 ```
 MOVIES_METADATA {
-  genres: [{ genreId: <int>,  name: <str>}],
+  genres: [{ genreId: <int>,  name: <str> }],
   revenue: float,
   budged: float,
   imdbId: int
@@ -67,7 +70,7 @@ Some preparation was needed to turn these three tables into a usable format. The
 
 The `ratings` table contains movie ratings at the level of `(movieId, userId)` pairs, i.e. at the level of an individual critic's review; a grouping operation was performed to compute the average rating for each movie. Finally, a join was performed between the two tables using the join table `links` to create a single `movies` table, which serves as the final dataset on which we run our regression.
 
-The `movies` schema is described below. The `profit`column is a derived quantity defined as `revenue - budget`; note the assumption here that all films use exactly there budget. The table also contains 32 genre columns with naming pattern `genre_[name]`; the prefix of "genre_" helps to avoid unfortunate name conflicts with keywords in postgres and python e.g. foreign (as in foreign key).
+The `movies` schema is described below. The `profit` column is a derived quantity defined as `revenue - budget`; note the assumption here that all films use exactly there budget. The table also contains 32 genre columns with naming pattern `genre_[name]`; the prefix of "genre_" helps to avoid unfortunate name conflicts with keywords in postgres and python e.g. foreign (as in foreign key).
 
 ```
 movies {
@@ -76,6 +79,7 @@ movies {
   budget: float,
   profit: float,
   release_date: date,
+  average_rating: float,
   genre_action: boolean,
   genre_thriller: boolean,
   ...
@@ -100,57 +104,56 @@ for (col in GENRE_COLUMNS) {
   movies[col] <- lapply(movies[col], as.logical)
 }
 
-# check if completeness is 
+# now just restrict to the columns we need
+features <- c(c("profit", "budget", "release_date", "average_rating"), GENRE_COLUMNS)
+
+movies <- movies[, features]
+
 movies$is_complete <- complete.cases(movies)
-ggplot(movies, aes(x=is_complete, y=profit)) + geom_jitter(width = .05, height=.05) + geom_point()
 
-num_non_profitable <- nrow(movies[movies$profit < 0.1 && -0.1 < movies$profit,])
-num_non_profitable
+p1 <- ggplot(movies, aes(x=is_complete, y=profit)) + geom_jitter(width = .05, height=.05) + geom_point()
+p2 <- ggplot(movies, aes(x=is_complete)) + geom_histogram(stat="count")
+grid.arrange(p1, p2, nrow=1)
 
-num_profitable <-  nrow(movies[movies$profit > 100,])
-num_profitable
-
-movies <- movies[movies$profit > 100,]
-
-# confirm that NA is not correlated with revenue
+# now we drop the incomplete cases
 movies <- movies[movies$is_complete == TRUE, ]
 
 # subsample 20% of the data
 # movies <- movies[sample(nrow(movies), nrow(movies) / 2), ]
 ```
 
+
 ### General Characteristics and Distribution
 
-First, let's take a look at the distribution of profit. It seems profit is approximately a gaussian variable, heavily peaked at zero, with a fraction of films being either profit positive or profit negative:
-```{r}
-ggplot(movies, aes(x=profit)) + geom_histogram(bins=100)
-```
+Some informative plots on the relevant variables are shown below -- the distributions of `profit`, `release_date` and `average_rating` ("average" here refers to average over critics for each film). All three seem approximately normal `profit` is heavily peaked at zero, with some
 
 ```{r}
-ggplot(movies, aes(x=budget, y=profit)) + geom_point()
+p1 <- ggplot(movies, aes(x=profit)) + geom_histogram(bins=40)
+p2 <- ggplot(movies, aes(x=average_rating)) + geom_histogram(bins = 25)
+p3 <- ggplot(movies, aes(x=release_date)) + geom_histogram(bins = 25)
+grid.arrange(p1, p2, p3, nrow=2)
 ```
-
-Ratings appear to have some effect on profitability, but as we can clearly see the relationship is non-linear:
 ```{r}
-ggplot(movies, aes(x=average_rating, y=profit)) + geom_point()
+p2 <- ggplot(movies, aes(x=budget, y=profit)) + geom_point()
+p3 <- ggplot(movies, aes(x=release_date, y=profit)) + geom_point()
+p1 <- ggplot(movies, aes(x=average_rating, y=profit)) + geom_point()
+grid.arrange(p1, p2, p3, nrow=2)
 ```
-
-
-Release date has an interesting relationship with profit;
-```{r}
-ggplot(movies, aes(x=release_date, y=profit)) + geom_point()
-```
+Budget is positively correlated with profit, with the relationship being heteroskedastic.Ratings appear to have some effect on profitability, but as we can clearly see the relationship is non-linear. Release date has an interesting relationship with profit.
 
 ## Model
 
 ```{r}
-lmod <- lm(profit ~ budget + average_rating + release_date + genre_vision_view_entertainment + genre_thriller + genre_pulser_productions + genre_war + genre_fantasy + genre_documentary + genre_sentai_filmworks + genre_gohands + genre_action + genre_mardock_scramble_production_committee + genre_family + genre_crime + genre_comedy + genre_foreign + genre_adventure + genre_telescene_film_group_productions + genre_mystery + genre_science_fiction + genre_horror + genre_drama + genre_carousel_productions + genre_rogue_state + genre_the_cartel + genre_animation + genre_romance + genre_western + genre_aniplex + genre_history + genre_brosta_tv + genre_tv_movie + genre_odyssey_media + genre_music, data = movies)
-lmod_reduced <- step(lmod, echo=FALSE)
-summary(lmod_reduced)
+lmod <- lm(profit ~ ., data = movies)
+sumary(lmod)
+
+lmod_reduced <- step(lmod, trace=0)
+sumary(lmod_reduced)
 ```
 
 
 # Discussion
 
+
 ## Challenges
-Not robust to re-sampling. Co-linearity between genres
+Not robust to re-sampling. Co-linearity between variables makes it difficult to interpret for causality.
