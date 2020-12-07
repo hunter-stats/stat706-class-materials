@@ -240,6 +240,7 @@ ggplot(movies, aes(x=profit, y=budget)) +
   geom_point(color='#2980B9', size = .5) + 
   geom_smooth(method=lm, color='#2C3E50')
 ``` 
+
 ### Diagnostics
 
 As noted in the results section, diagnostic plots indicate two issues. 
@@ -295,6 +296,6 @@ grid.arrange(p1, p2, nrow=1)
 
 ## Future Directions and Improvements
 
-The primary improvement that would be done here is to change the link function to account for heavy tails. Perhaps robust regression would be a suitable technique here, or a link function that models an exponential response rather than a gaussian.
+The primary improvement that should be done here is to change the link function to account for heavy tails. Perhaps robust regression would be a suitable technique here, or a link function that models an exponential response rather than a gaussian.
 
-The effects of genres are somewhat difficult to interpret here. Genres themselves might be expressions of deeper underlying characteristics of films, and numerous external variables are not controlled for, e.g. marketing, the reputation of particular directors, and interactions among genres.
+The effects of genres are somewhat difficult to interpret here. Genres themselves might be expressions of deeper underlying characteristics of films, and numerous external variables are not controlled for, e.g. marketing, the reputation of particular directors, and interactions among genres. Further investigation might also try to extract features from the "ground truth" e.g. film scripts or images.
