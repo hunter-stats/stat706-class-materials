@@ -37,7 +37,7 @@ In particular, we hope to answer the following questions:
 
 We begin from a complete set of predictors and use an iterative procedure to minimize the Akaike-Information Criterion (i.e. R's `step` function) in order to discover the most powerful predictors. We then examine the reduced model for significance, interpret the results, and construct prediction intervals for movies of varying characteristics.
 
-# Data
+# Description of Data
 
 ## Transformations, Cleaning, and Schema
 The Movies dataset contains three tables relevant to our analysis --  `movies_metadata`, `ratings`, and a join table `links`. The three tables have the following schemas:
@@ -119,7 +119,7 @@ grid.arrange(p1, p2, nrow=1)
 movies <- movies[movies$is_complete == TRUE, ]
 ```
 
-## Description of Data
+## Distribution and Characteristics
 The `movies` table contains four continuous variables -- `profit`, `budget`, `average_rating`, and `release_date`, as well as 21 boolean variables reperesenting genre classifications e.g. `genre_action`. The distributions of the four continuous variables, as well as scatter plots of the input variables against `profit` are shown below:
 
 ```{r}
@@ -197,17 +197,8 @@ Shown below are several diagnostic plots -- the qnorm plot of the residuals,  th
 movies$residual <- residuals(lmod_reduced)
 movies$prediction <- predict(lmod_reduced)
 
-p0 <- ggplot(data = movies, aes(sample=residual)) + stat_qq() + stat_qq_line() + xlab("Theoretical Quantiles")+ylab("Standardized Residuals")
-
-p1 <- ggplot(data = movies, aes(x=prediction, y=profit)) + geom_point() + geom_abline(intercept = 0, slope = 1, color="red", 
-                 linetype="dashed", size=.5) + stat_smooth(method="loess", na.rm=TRUE)
-
-p2 <- ggplot(data = movies, aes(x=prediction, y=residual)) + geom_point() + geom_abline(intercept = 0, slope = 0, color="red", 
-                 linetype="dashed", size=.5) + stat_smooth(method="loess", na.rm=TRUE)
-
-p3 <- 
-
-grid.arrange(p0, p1, p2, nrow=2) 
+par(mfrow = c(2,2))
+plot(lmod_reduced)
 ```
 
 
@@ -215,7 +206,7 @@ Here are plots of the residuals against some of the predictors:
 
 
 ```{r}
-p1 <- ggplot(data = movies, aes(x=residual)) + geom_histogram(bins=100)
+p1 <- ggplot(data = movies, aes(x=prediction, y=profit)) + geom_point() + geom_smooth()
 p2 <- ggplot(data = movies, aes(x=profit, y=residual)) + geom_point()
 p3 <- ggplot(data = movies, aes(x=budget, y=residual)) + geom_point()
 p4 <- ggplot(data = movies, aes(x=average_rating, y=residual)) + geom_point()
@@ -244,25 +235,41 @@ The remaining significant variables `budget` and `average_rating` have positive 
 
 Altogether, the model suggests that the best way to make a profitable film is to create a lighthearted adventure film which is also a critical favorite, such as Harry Potter or Star Wars. 
 
+```{r}
+ggplot(movies, aes(x=profit, y=budget)) + 
+  geom_point(color='#2980B9', size = .5) + 
+  geom_smooth(method=lm, color='#2C3E50')
+``` 
 ### Diagnostics
 
 As noted in the results section, diagnostic plots indicate two issues. 
 
-First, the model errors are "heavy-tailed" rather than normally distributed (see the results section). Though this has no pertinence for the sign and magnitude of our estimated coefficients, it does make our significance estimates and confidence intervals suspect. 
+First, the model errors are "heavy-tailed" rather than normally distributed. 
+
+```{r}
+plot(lmod_reduced, which = 2)
+```
+
+Though this has no impact on the sign and magnitude of our estimated coefficients, it does make our significance estimates and confidence intervals suspect. 
 
 Second, the residuals are still very much correlated with all the continuous variables after the regression. In fact, the plots of the residuals against the predictors closely resemble the plots of profit against the predictors.
 
-The two problems above are due to the same underlying issue with the data -- the response is heavily peaked at zero, and so the regression is largely encouraged to skew predictions towards zero. As we can see below, predictions, especially for highly profitable films, regularly fall closer to zero than should be the case.
+The two problems above are due to the same underlying issue with the data -- the response is heavily peaked at zero, and so the regression has trouble picking up signal because it is largely encouraged to skew predictions towards zero. As we can see below, predictions, especially for highly profitable films, regularly fall closer to zero than should be the case. As well, it seems that the absolute value of the residual increases with profit, indicating our model has trouble dealing with larger response values.
 
 ```{r}
-ggplot(data = movies, aes(x=profit, y=prediction)) + geom_point() + geom_abline(intercept = 0, slope = 1, color="red", 
-                 linetype="dashed", size=1.5)
+p1 <- ggplot(data = movies, aes(x=profit, y=prediction)) + geom_point() + geom_smooth() +  geom_abline(intercept = 0, slope = 1, color="red", 
+                 linetype="dashed", size=1.5) 
+
+p2 <- ggplot(data = movies, aes(x=profit, y=sqrt(residual^2))) + geom_point() + geom_smooth()
+
+grid.arrange(p1, p2, nrow=1)
 ```
 
 I attempted to solve this problem by restricting the analysis to films which were profit positive and log-transforming the `profit` variable. As we can see, dropping movies whose profit is not strictly greater than zero and then log transforming the profit column makes the data more closely resemble a gaussian:
 
 ```{r}
 movies <- movies[movies$profit > PROFIT_THRESHOLD, ]
+
 features <- c(c("profit", "budget", "release_date", "average_rating"), GENRE_COLUMNS)
 movies <- movies[, features]
 
@@ -285,8 +292,9 @@ p2 <- ggplot(data = movies, aes(x=pred, y=profit)) + geom_point()
 grid.arrange(p1, p2, nrow=1)
 ```
 
+
 ## Future Directions and Improvements
 
-The primary improvement that would be done here is to change the link function to account for heavy tails. 
+The primary improvement that would be done here is to change the link function to account for heavy tails. Perhaps robust regression would be a suitable technique here, or a link function that models an exponential response rather than a gaussian.
 
-Causality is difficult to interpret here. Genres themselves might be expressions of deeper underlying characteristics of films, and numerous external variables are not controlled for, e.g. marketing, the reputation of particular directors, and interactions among genres.
+The effects of genres are somewhat difficult to interpret here. Genres themselves might be expressions of deeper underlying characteristics of films, and numerous external variables are not controlled for, e.g. marketing, the reputation of particular directors, and interactions among genres.
