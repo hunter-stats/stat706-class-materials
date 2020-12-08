@@ -4,10 +4,6 @@ subtitle: Nickhil Sethi
 output:
   pdf_document: default
   word_document: default
-  
-# TODO
-# - Prediction intervals
-# - Look at outliers and try to find a pattern
 ---
 
 ```{r setup, include=FALSE}
