@@ -103,10 +103,11 @@ for (col in GENRE_COLUMNS) {
 }
 
 # now just restrict to the columns we need
-features <- c(c("profit", "budget", "release_date", "average_rating"), GENRE_COLUMNS)
-
+continuous_vars <- c("profit", "budget", "release_date", "average_rating")
+features <- c(continuous_vars, GENRE_COLUMNS)
 movies <- movies[, features]
 
+# remove incomplete cases
 movies$is_complete <- complete.cases(movies)
 
 p1 <- ggplot(
@@ -148,7 +149,6 @@ A second issue results from the fact that `budget`, `average_rating`, and `relea
 Finally, let's take a look at the genre columns, to get a sense of the relative frequencies:
 
 ```{r}
-
 genre_counts <- read.csv('/Users/nickhilsethi/src/stat706-class-materials/final-project/terraform/project-infra/genre_counts.csv')
 genre_counts <- genre_counts[genre_counts$genre %in% GENRE_COLUMNS, ]
 ggplot(genre_counts, aes(x=genre, y=count)) + geom_bar(stat="identity") + theme(text = element_text(size=12), axis.text.x = element_text(angle=90, vjust=0.5, hjust = 1))
@@ -225,43 +225,40 @@ The `step` function was chosen as the primary technique for this model so as to 
 
 ### Model Coefficients: Genre, Release Date, Budget, Rating
 
-Given a threshold of .05, all variables are significant in the reduced model with the exceptions of `release_date` and three genres -- `fantasy`, `family`, and `foreign`. 
+The AIC minimization procedure eliminated 7 variables from the complete model, all of which are genres. The general trend is that niche genres such as `tv_movie` are removed in favor of mainstream ones such as `action`. Those that remain have effects on the order of `10e6` -- a change in genre can make a difference on the order of `$1,000,000` in profit.
 
-The AIC minimization procedure eliminated 7 variables from the complete model, all of which are genres. The general trend is that niche genres such as `tv_movie` are removed in favor of mainstream ones such as `action`; the predictors dropped by the `step` function also typically had p-values well above .05 in the original model. Those that remain have effects on the order of `10e6` -- a change in genre can make a difference on the order of `1,000,000` in profit.
-
-In the reduced model, the only significant genres which have positive coefficients are `adventure`, `horror`, and `animation`. Genres `action`, `crime`, `drama`, `war`, `thriller`, `history` and `western` all have negative coefficients. Taken together, these results suggest that audiences  are averse to films with stressful subject matter (e.g. `drama` and `war`) or historical content (e.g. `history` and `western`). `horror` is the only counterexample to this conclusion, but it is difficult to ascertain why this is the case without further investigation into how genre labels are assigned.
-
-The remaining significant variables `budget` and `average_rating` have positive effects on `profit`. `budget` has a coefficient of `~1.8`, indicating a roughly 2:1 return for an added dollar of budget. `average_rating` has a particularly strong effect on `profit`, with a coefficient of `4.0986e+06`; a single star increase in rating entails an increase in profit of $4,000,000. The effect of `release_date` is unclear, as its coefficient did not pass significance.
-
-Altogether, the model suggests that the best way to make a profitable film is to create a lighthearted adventure film which is also a critical favorite, such as Harry Potter or Star Wars. 
+Given a threshold of .05, all variables in the reduced model are significant with the exceptions of `release_date` and three genres -- `fantasy`, `family`, and `foreign`. See below for 95% confidence intervals of the coefficients. For the variables that pass significance, the confidence intervals estimate a range that is on the order of magnitude of the estimated coefficient: 
 
 ```{r}
-ggplot(movies, aes(x=profit, y=budget)) + 
-  geom_point(color='#2980B9', size = .5) + 
-  geom_smooth(method=lm, color='#2C3E50')
-``` 
+confint(lmod_reduced)
+```
+
+The only significant genres which have positive coefficients are `adventure`, `horror`, and `animation`. Genres `action`, `crime`, `drama`, `war`, `thriller`, `history` and `western` all have negative coefficients. Taken together, these results suggest that audiences  are averse to films with stressful subject matter (e.g. `drama` and `war`) or historical content (e.g. `history` and `western`). `horror` is a counterexample to this conclusion, but it is difficult to ascertain why this is the case without further investigation into how genre labels are assigned.
+
+The remaining significant variables `budget` and `average_rating` have positive effects on `profit`. `budget` has a coefficient of `~1.8`, indicating a roughly 2:1 return for an added dollar of budget. `average_rating` has a particularly strong effect on `profit`, with a coefficient of `4.0986e+06`; a single star increase in rating entails an increase in profit of $4,000,000. The effect of `release_date` is unclear, as its coefficient did not pass significance; the confidence interval of `release_date` crosses zero, and so the sign of this coefficient is unclear as well.
+
+Altogether, the model suggests that the best way to make a profitable film is to create a lighthearted adventure film which is also a critical favorite, such as Harry Potter or Star Wars.
 
 ### Diagnostics
 
-As noted in the results section, diagnostic plots indicate two issues. 
-
-First, the model errors are "heavy-tailed" rather than normally distributed. 
+Of the diagnostic graphs in the results section, the QQ plot and the residuals vs fitted plot indicate issues with the model. From the QQ plot, we see that the model errors are "heavy-tailed" rather than normally distributed. 
 
 ```{r}
 plot(lmod_reduced, which = 2)
 ```
 
-Though this has no impact on the sign and magnitude of our estimated coefficients, it does make our significance estimates and confidence intervals suspect. 
+Though this has no impact on the sign and magnitude of our estimated coefficients, it does make our significance estimates and confidence intervals suspect. Heavy tailed residuals cause us to overestimate the variance, and so our confidence intervals are likely wider than they should be.
 
-Second, the residuals are still very much correlated with all the continuous variables after the regression. In fact, the plots of the residuals against the predictors closely resemble the plots of profit against the predictors.
+Second, we see from the fitted vs residuals (and the residuals vs predictors) plots that the residuals are still very much correlated with the prediction, response, and inputs after the regression. In fact, the plots of the residuals against the predictors closely resemble the plots of profit against the predictors.
 
-The two problems above are due to the same underlying issue with the data -- the response is heavily peaked at zero, and so the regression has trouble picking up signal because it is largely encouraged to skew predictions towards zero. As we can see below, predictions, especially for highly profitable films, regularly fall closer to zero than should be the case. As well, it seems that the absolute value of the residual increases with profit, indicating our model has trouble dealing with larger response values.
+The two problems above are due to the same underlying issue with the data -- the response is heavily peaked at zero, and so the regression has trouble picking up signal because it is largely encouraged to skew predictions towards zero. 
 
+This is confirmed by the plots below. The graph on the left indicates that the model's predictions, especially for highly profitable films, fall closer to zero than expected. The graph on the right indicates that the absolute value of the residual increases as profit moves away from zero in either direction.
 ```{r}
 p1 <- ggplot(data = movies, aes(x=profit, y=prediction)) + geom_point() + geom_smooth() +  geom_abline(intercept = 0, slope = 1, color="red", 
                  linetype="dashed", size=1.5) 
 
-p2 <- ggplot(data = movies, aes(x=profit, y=sqrt(residual^2))) + geom_point() + geom_smooth()
+p2 <- ggplot(data = movies, aes(x=profit, y=abs(residual))) + geom_point() + geom_smooth()
 
 grid.arrange(p1, p2, nrow=1)
 ```
@@ -278,7 +275,7 @@ movies$log_profit <- log(movies$profit + 100)
 ggplot(data = movies, aes(x=log_profit)) + geom_histogram()
 ```
 
-Now let us run the same procedure as above, but with the response as `log(profit)`. Unfortunately this seems to create the opposite problem; the predictor is linear in `profit` but should be linear in `log(profit)`, and so we have the same interpretation problem as we had before.
+Now let us run the same procedure as above, but with the response as `log(profit)`. This seems to improve things a bit for most points, but on the edges of the distribution the problem is now reversed; for highly profitable films, predictions are skewed high. 
 ```{r}
 lmod <- lm(log_profit ~ ., data = movies)
 lmod <- step(lmod, trace=0)
@@ -287,12 +284,9 @@ copy <- sprintf("AIC for model with log transformation: %f", AIC(lmod))
 noquote(format(copy))
 
 movies$pred <- predict(lmod)
-p1 <- ggplot(data = movies, aes(x=pred, y=log_profit)) + geom_point()
-p2 <- ggplot(data = movies, aes(x=pred, y=profit)) + geom_point()
-
-grid.arrange(p1, p2, nrow=1)
+ggplot(data = movies, aes(x=pred, y=log_profit)) + geom_point() + geom_abline(intercept = 0, slope = 1, color="red", 
+                 linetype="dashed", size=1.5) + geom_smooth()
 ```
-
 
 ## Future Directions and Improvements
 
